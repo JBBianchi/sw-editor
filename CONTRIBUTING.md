@@ -54,15 +54,15 @@ For new features or architectural changes:
 ## Coding Standards
 
 * **TypeScript**: Always use strict typing. Avoid `any`.
-* **Linting & Formatting**: This project uses **ESLint** and **Prettier**. Run `npm run lint` before submitting code.
-* **Testing**: Ensure that logic changes are covered by unit tests.
+* **Linting & Formatting**: Follow the existing code style and formatting conventions used in the files you are editing. If the package you are changing defines linting or formatting scripts, run those before submitting code.
+* **Testing**: Ensure that logic changes are covered by tests, and run the relevant test commands for the packages you modify (see their documentation or `package.json`).
 * **Component Design**: Follow functional component patterns and ensure that UI state is managed predictably within the monorepo structure.
 
 ## Pull Request Process
 
 1. **Fork** the repository and create your branch from `main`.
 2. **Commit** your changes with clear, descriptive messages.
-3. **Verify** your changes by running tests: `npm test`.
+3. **Verify** your changes by running the appropriate build and/or test commands for the packages you modified.
 4. **Submit** a Pull Request (PR).
 5. **DCO Sign-off**: As a CNCF project, all commits must be signed off (`git commit -s`) to certify the Developer Certificate of Origin.
 6. **Review**: At least one maintainer must review and approve your PR before it is merged.
@@ -70,4 +70,4 @@ For new features or architectural changes:
 ---
 
 ### Community and Communication
-Join the conversation on the [CNCF Slack](https://cloud-native.slack.com/) in the `#serverless-workflow` channel.
+Join the conversation on the [CNCF Slack](https://slack.cncf.io/) in the `#serverless-workflow` channel.

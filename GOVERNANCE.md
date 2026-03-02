@@ -11,4 +11,4 @@ Please refer to the primary governance document for details on contributor roles
 ---
 
 ## Community & Support
-If you have questions regarding the governance or how to get involved, please join us on the [CNCF Slack](https://cloud-native.slack.com/) in the `#serverless-workflow` channel.
+If you have questions regarding the governance or how to get involved, please join us on the [CNCF Slack](https://slack.cncf.io/) in the `#serverless-workflow` channel.
