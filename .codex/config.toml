@@ -1,0 +1,23 @@
+[mcp_servers.spec-kit-documentation]
+command = "npx"
+args = [
+  "-y",
+  "mcp-remote",
+  "https://gitmcp.io/github/spec-kit"
+]
+
+[mcp_servers.serverless-workflow-specification-documentation]
+command = "npx"
+args = [
+  "-y",
+  "mcp-remote",
+  "https://gitmcp.io/serverlessworkflow/specification"
+]
+
+[mcp_servers.serverless-workflow-sdk-typescript-documentation]
+command = "npx"
+args = [
+  "-y",
+  "mcp-remote",
+  "https://gitmcp.io/serverlessworkflow/sdk-typescript"
+]
