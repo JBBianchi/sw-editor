@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs:*)",
+      "WebFetch(domain:material-web.dev)",
+      "WebFetch(domain:ui.shadcn.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:isaichenko.dev)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:m3.material.io)",
+      "WebFetch(domain:gitmcp.io)",
+      "Bash(gh api repos/github/spec-kit/git/trees/main?recursive=1 --jq '.tree[].path')",
+      "Bash(gh api repos/github/spec-kit/git/trees/main --jq '.tree[].path')",
+      "mcp__spec-kit__fetch_spec_kit_documentation",
+      "mcp__spec-kit__search_spec_kit_documentation",
+      "mcp__spec-kit__search_spec_kit_code",
+      "mcp__spec-kit__fetch_generic_url_content",
+      "Bash(docker compose build speckit)",
+      "Bash(docker compose run --rm speckit init --here --ai claude --script sh --force --no-git --ignore-agent-tools)",
+      "Bash(bash .specify/scripts/bash/check-prerequisites.sh --json --paths-only)",
+      "Bash(SPECIFY_FEATURE=001-visual-authoring-mvp bash .specify/scripts/bash/check-prerequisites.sh --json --paths-only)",
+      "Bash(SPECIFY_FEATURE=001-visual-authoring-mvp bash .specify/scripts/bash/setup-plan.sh --json)",
+      "Bash(npm view @serverlessworkflow/sdk-typescript)",
+      "Bash(npm view @serverlessworkflow/sdk)",
+      "Bash(npm view @serverlessworkflow/sdk versions --json)",
+      "Bash(docker compose run --rm speckit init --here --ai claude --script sh --ignore-agent-tools --no-git)",
+      "Bash(docker compose run --rm speckit init --here --ai claude --script sh --ignore-agent-tools --no-git --force)",
+      "Bash(for f in C:/Dev/JBBianchi/serverlessworkflow-editor/spec/adr/*.md)",
+      "Bash(do head -20 \"$f\")",
+      "Bash(docker compose run --rm speckit --help)",
+      "Bash(cd /c/Dev/JBBianchi/serverlessworkflow-editor && git show*)",
+      "Bash(cd /c/Dev/JBBianchi/serverlessworkflow-editor && git show:*)",
+      "Bash(git show:*)"
+    ]
+  }
+}

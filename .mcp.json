@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "spec-kit-documentation": {
+      "type": "http",
+      "url": "https://gitmcp.io/github/spec-kit"
+    },
+    "serverless-workflow-specification-documentation": {
+      "type": "http",
+      "url": "https://gitmcp.io/serverlessworkflow/specification"
+    },
+    "serverless-workflow-sdk-typescript-documentation": {
+      "type": "http",
+      "url": "https://gitmcp.io/serverlessworkflow/sdk-typescript"
+    }
+  }
+}
