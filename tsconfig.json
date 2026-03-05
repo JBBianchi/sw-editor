@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "files": [],
+  "references": [
+    { "path": "./packages/editor-core" },
+    { "path": "./packages/editor-web-component" },
+    { "path": "./packages/editor-host-client" },
+    { "path": "./packages/editor-renderer-contract" },
+    { "path": "./packages/editor-renderer-react-flow" },
+    { "path": "./packages/editor-renderer-rete-lit" }
+  ]
+}
