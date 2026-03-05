@@ -65,4 +65,4 @@
 - [x] T028 [P] Add performance measurement harness for validation latency in `tests/integration/validation-latency.spec.ts`
 - [x] T029 Run quickstart scenarios from `specs/001-visual-authoring-mvp/quickstart.md` and capture results
 - [ ] T030 [P] Add renderer-matrix contract tests for `getCapabilities()` payload in `tests/contract/renderer-capabilities.contract.spec.ts`
-- [ ] T031 [P] Add renderer-matrix integration tests for create/load/edit/export/validate parity in `tests/integration/renderer-mvp-parity.spec.ts`
+- [x] T031 [P] Add renderer-matrix integration tests for create/load/edit/export/validate parity in `tests/integration/renderer-mvp-parity.spec.ts`
