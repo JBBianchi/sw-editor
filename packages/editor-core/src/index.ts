@@ -15,3 +15,5 @@ export type {
 } from "./source/index.js";
 
 export { parseWorkflowSource, serializeWorkflow } from "./source/index.js";
+
+export * from "./diagnostics/index.js";

@@ -7,13 +7,13 @@
 
 - [x] T001 Create package layout for core, web component, and host client modules in `packages/`
 - [x] T002 Configure baseline toolchain in repo config files (Node.js 24 LTS, `pnpm@10.30.3`, `@biomejs/biome@2.4.5`, `vitest@4.0.18`, `@playwright/test@1.58.2`)
-- [ ] T003 [P] Add fixtures for JSON and YAML workflow sources in `tests/fixtures/`
+- [x] T003 [P] Add fixtures for JSON and YAML workflow sources in `tests/fixtures/`
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
 - [x] T004 Implement source parse/serialize service in `packages/editor-core/src/source/`
 - [ ] T005 [P] Implement diagnostics model and event payload types in `packages/editor-core/src/diagnostics/`
-- [ ] T006 [P] Implement host contract surface types in `packages/editor-host-client/src/contracts/`
+- [x] T006 [P] Implement host contract surface types in `packages/editor-host-client/src/contracts/`
 - [ ] T007 Implement monotonic revision tracking in `packages/editor-core/src/state/`
 - [ ] T008 Implement event bridge from core to web component in `packages/editor-web-component/src/events/`
 

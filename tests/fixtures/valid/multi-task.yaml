@@ -1,0 +1,60 @@
+# Multi-step order processing workflow.
+# Tests sequential task chaining, input/output export, and special characters in metadata.
+# Edge case: metadata description contains XML/HTML special characters: <>&"
+document:
+  dsl: '1.0.0'
+  namespace: fixtures
+  name: multi-task-order
+  version: '1.0.0'
+  metadata:
+    description: 'Multi-step order processing workflow with special chars: <>&"'
+input:
+  schema:
+    format: json
+    document:
+      type: object
+      required:
+        - orderId
+        - customerId
+      properties:
+        orderId:
+          type: string
+        customerId:
+          type: string
+        amount:
+          type: number
+          minimum: 0
+do:
+  # Step 1: validate the order before charging
+  - validateOrder:
+      call: http
+      with:
+        method: post
+        endpoint: https://api.example.com/orders/validate
+        body:
+          orderId: ${ .orderId }
+          customerId: ${ .customerId }
+      export:
+        as:
+          validationResult: ${ . }
+  # Step 2: charge payment using the validated order amount
+  - chargePayment:
+      call: http
+      with:
+        method: post
+        endpoint: https://api.example.com/payments/charge
+        body:
+          orderId: ${ .orderId }
+          amount: ${ .amount }
+      export:
+        as:
+          paymentId: ${ .paymentId }
+  # Step 3: fulfill the order once payment is confirmed
+  - fulfillOrder:
+      call: http
+      with:
+        method: post
+        endpoint: https://api.example.com/orders/fulfill
+        body:
+          orderId: ${ .orderId }
+          paymentId: ${ .paymentId }

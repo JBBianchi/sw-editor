@@ -1,0 +1,83 @@
+{
+  "document": {
+    "dsl": "1.0.0",
+    "namespace": "fixtures",
+    "name": "multi-task-order",
+    "version": "1.0.0",
+    "metadata": {
+      "description": "Multi-step order processing workflow with special chars: <>&\""
+    }
+  },
+  "input": {
+    "schema": {
+      "format": "json",
+      "document": {
+        "type": "object",
+        "required": ["orderId", "customerId"],
+        "properties": {
+          "orderId": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  },
+  "do": [
+    {
+      "validateOrder": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/orders/validate",
+          "body": {
+            "orderId": "${ .orderId }",
+            "customerId": "${ .customerId }"
+          }
+        },
+        "export": {
+          "as": {
+            "validationResult": "${ . }"
+          }
+        }
+      }
+    },
+    {
+      "chargePayment": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/payments/charge",
+          "body": {
+            "orderId": "${ .orderId }",
+            "amount": "${ .amount }"
+          }
+        },
+        "export": {
+          "as": {
+            "paymentId": "${ .paymentId }"
+          }
+        }
+      }
+    },
+    {
+      "fulfillOrder": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/orders/fulfill",
+          "body": {
+            "orderId": "${ .orderId }",
+            "paymentId": "${ .paymentId }"
+          }
+        }
+      }
+    }
+  ]
+}
