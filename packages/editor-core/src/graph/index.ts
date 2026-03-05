@@ -5,3 +5,4 @@ export {
   START_NODE_ID,
   bootstrapWorkflowGraph,
 } from "./bootstrap.js";
+export { projectWorkflowToGraph } from "./project.js";
