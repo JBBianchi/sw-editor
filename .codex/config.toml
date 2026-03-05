@@ -21,3 +21,27 @@ args = [
   "mcp-remote",
   "https://gitmcp.io/serverlessworkflow/sdk-typescript"
 ]
+
+[mcp_servers.rete-js-documentation]
+command = "npx"
+args = [
+  "-y",
+  "mcp-remote",
+  "https://gitmcp.io/retejs/rete"
+]
+
+[mcp_servers.rete-lit-plugin-documentation]
+command = "npx"
+args = [
+  "-y",
+  "mcp-remote",
+  "https://gitmcp.io/retejs/lit-plugin"
+]
+
+[mcp_servers.react-flow-documentation]
+command = "npx"
+args = [
+  "-y",
+  "mcp-remote",
+  "https://gitmcp.io/xyflow/xyflow"
+]
