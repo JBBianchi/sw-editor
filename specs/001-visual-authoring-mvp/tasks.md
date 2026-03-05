@@ -44,7 +44,7 @@
 
 - [x] T018 [P] [US2] Implement load workflow command in `packages/editor-core/src/commands/load-workflow.ts`
 - [x] T019 [P] [US2] Map loaded model to graph projection in `packages/editor-core/src/graph/project.ts`
-- [ ] T020 [US2] Wire load API on web component host surface in `packages/editor-web-component/src/api/load.ts`
+- [x] T020 [US2] Wire load API on web component host surface in `packages/editor-web-component/src/api/load.ts`
 - [ ] T021 [US2] Add round-trip integration tests in `tests/integration/workflow-roundtrip.spec.ts`
 
 ## Phase 5: User Story 3 - Get Immediate Validation Feedback (Priority: P3)
