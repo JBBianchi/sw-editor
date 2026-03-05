@@ -12,7 +12,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@sw-editor/editor-core": "workspace:*"
+    "@sw-editor/editor-core": "workspace:*",
+    "@sw-editor/editor-host-client": "workspace:*"
   },
   "devDependencies": {
     "typescript": "5.9.3",
