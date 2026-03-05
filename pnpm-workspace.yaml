@@ -1,2 +1,7 @@
 packages:
-  - "packages/*"
+  - "packages/editor-core"
+  - "packages/editor-web-component"
+  - "packages/editor-host-client"
+  - "packages/editor-renderer-contract"
+  - "packages/editor-renderer-rete-lit"
+  - "packages/editor-renderer-react-flow"

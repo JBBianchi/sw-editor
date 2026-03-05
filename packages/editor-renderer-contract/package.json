@@ -2,5 +2,15 @@
   "name": "@sw-editor/editor-renderer-contract",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "description": "Shared renderer adapter contract — mount, update, dispose, and event bridge types",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
 }

@@ -2,5 +2,17 @@
   "name": "@sw-editor/editor-core",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "description": "Headless editor core — source parsing, validation, state management, and event bridge",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vitest": "4.0.18"
+  }
 }

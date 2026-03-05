@@ -2,5 +2,18 @@
   "name": "@sw-editor/editor-renderer-react-flow",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "description": "React Flow renderer adapter implementing the shared renderer contract",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sw-editor/editor-renderer-contract": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
 }

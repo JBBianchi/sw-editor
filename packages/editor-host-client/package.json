@@ -2,5 +2,20 @@
   "name": "@sw-editor/editor-host-client",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "description": "Thin host client providing the host-editor contract surface and export utilities",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sw-editor/editor-core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vitest": "4.0.18"
+  }
 }
