@@ -1,0 +1,9 @@
+# Invalid fixture: missing required top-level 'document' field.
+# Expected behaviour: schema validation MUST reject this workflow.
+# Schema violation: 'document' is required by the Serverless Workflow DSL schema.
+do:
+  - fetchData:
+      call: http
+      with:
+        method: get
+        endpoint: https://api.example.com/data

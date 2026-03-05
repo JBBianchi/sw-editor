@@ -1,0 +1,61 @@
+# Parallel notification workflow with fork (branching).
+# Tests fork task with multiple concurrent branches and Unicode characters.
+# Edge case: message field description contains Unicode: éàü中文
+document:
+  dsl: '1.0.0'
+  namespace: fixtures
+  name: parallel-notifications
+  version: '1.0.0'
+input:
+  schema:
+    format: json
+    document:
+      type: object
+      required:
+        - userId
+        - message
+      properties:
+        userId:
+          type: string
+        message:
+          type: string
+          # Unicode edge case: éàü中文
+          description: 'Notification message (supports Unicode: éàü中文)'
+do:
+  - sendNotifications:
+      fork:
+        # All three branches run concurrently; results are collected as an array
+        compete: false
+        branches:
+          - sendEmail:
+              call: http
+              with:
+                method: post
+                endpoint: https://api.example.com/notify/email
+                body:
+                  userId: ${ .userId }
+                  message: ${ .message }
+          - sendSms:
+              call: http
+              with:
+                method: post
+                endpoint: https://api.example.com/notify/sms
+                body:
+                  userId: ${ .userId }
+                  message: ${ .message }
+          - sendPush:
+              call: http
+              with:
+                method: post
+                endpoint: https://api.example.com/notify/push
+                body:
+                  userId: ${ .userId }
+                  message: ${ .message }
+  - logResult:
+      call: http
+      with:
+        method: post
+        endpoint: https://api.example.com/audit/log
+        body:
+          userId: ${ .userId }
+          action: notifications_sent
