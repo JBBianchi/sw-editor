@@ -22,7 +22,7 @@
 - [x] T009 Define renderer abstraction contract (`mount`, `update`, `dispose`, selection/event bridge) in `packages/editor-renderer-contract/src/renderer-adapter.ts`
 - [x] T010 [P] Implement `rete-lit` adapter against renderer contract in `packages/editor-renderer-rete-lit/src/rete-lit-adapter.ts`
 - [x] T011 [P] Implement `react-flow` adapter against renderer contract in `packages/editor-renderer-react-flow/src/react-flow-adapter.ts`
-- [ ] T012 Wire bundle-level renderer selection and capability exposure in `packages/editor-host-client/src/contracts/capabilities.ts`
+- [x] T012 Wire bundle-level renderer selection and capability exposure in `packages/editor-host-client/src/contracts/capabilities.ts`
 
 ## Phase 3: User Story 1 - Create A Valid Workflow Visually (Priority: P1)
 

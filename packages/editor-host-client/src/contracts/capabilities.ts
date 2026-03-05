@@ -53,3 +53,64 @@ export interface CapabilitySnapshot {
   /** Renderer-specific capability details. */
   rendererCapabilities: RendererCapabilitySnapshot;
 }
+
+// ---------------------------------------------------------------------------
+// Contract-level metadata constants
+// ---------------------------------------------------------------------------
+
+/**
+ * SemVer string of the host–editor contract implemented by this package.
+ *
+ * Increment the major version when a backward-incompatible API change is made.
+ * Hosts should verify that the major component matches their expectation before
+ * issuing further API calls.
+ */
+export const CONTRACT_VERSION = "0.1.0" as const;
+
+/**
+ * Serverless Workflow specification version that this editor primarily targets.
+ *
+ * Corresponds to the latest specification version whose full feature set is
+ * supported by the editor's parse, validate, and project pipeline.
+ */
+export const TARGET_VERSION = "1.0" as const;
+
+/**
+ * All Serverless Workflow specification versions that this editor can parse
+ * and validate, including {@link TARGET_VERSION}.
+ *
+ * Hosts may inspect this list to determine whether a document of a given
+ * specification version can be opened without degraded behavior.
+ */
+export const SUPPORTED_VERSIONS: readonly string[] = ["0.8", "0.9", "1.0"] as const;
+
+// ---------------------------------------------------------------------------
+// Factory
+// ---------------------------------------------------------------------------
+
+/**
+ * Construct a {@link CapabilitySnapshot} from a renderer's capability snapshot.
+ *
+ * Combines the static contract-level metadata ({@link CONTRACT_VERSION},
+ * {@link TARGET_VERSION}, {@link SUPPORTED_VERSIONS}) with the renderer-specific
+ * details supplied by the active renderer adapter.
+ *
+ * Each renderer bundle entry calls this function once at module evaluation time
+ * and re-exports the frozen result via its `getCapabilities` export. This
+ * ensures that renderer selection is fixed at build time and that no runtime
+ * switching is possible.
+ *
+ * @param rendererCapabilities - The capability snapshot from the active renderer adapter.
+ * @returns A fully-populated {@link CapabilitySnapshot} for the current bundle.
+ */
+export function createCapabilitySnapshot(
+  rendererCapabilities: RendererCapabilitySnapshot,
+): CapabilitySnapshot {
+  return {
+    contractVersion: CONTRACT_VERSION,
+    targetVersion: TARGET_VERSION,
+    supportedVersions: [...SUPPORTED_VERSIONS],
+    rendererId: rendererCapabilities.rendererId,
+    rendererCapabilities,
+  };
+}
