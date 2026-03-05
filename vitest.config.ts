@@ -82,6 +82,24 @@ export default defineConfig({
                 import.meta.url,
               ),
             ),
+            "@sw-editor/editor-renderer-contract": fileURLToPath(
+              new URL(
+                "./packages/editor-renderer-contract/src/index.ts",
+                import.meta.url,
+              ),
+            ),
+            "@sw-editor/editor-renderer-rete-lit": fileURLToPath(
+              new URL(
+                "./packages/editor-renderer-rete-lit/src/index.ts",
+                import.meta.url,
+              ),
+            ),
+            "@sw-editor/editor-renderer-react-flow": fileURLToPath(
+              new URL(
+                "./packages/editor-renderer-react-flow/src/index.ts",
+                import.meta.url,
+              ),
+            ),
           },
         },
       }),
