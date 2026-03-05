@@ -41,4 +41,15 @@ export class RevisionCounter {
     this.#revision += 1;
     return this.#revision;
   }
+
+  /**
+   * Resets the revision counter back to `0`.
+   *
+   * Use this when initializing a fresh editor state, such as when loading a
+   * new workflow document. After calling `reset`, the next call to
+   * {@link increment} will return `1`.
+   */
+  reset(): void {
+    this.#revision = 0;
+  }
 }
