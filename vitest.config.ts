@@ -62,6 +62,23 @@ export default defineConfig({
           },
         },
       }),
+      defineProject({
+        test: {
+          name: "integration-tests",
+          environment: "node",
+          include: ["tests/integration/**/*.{test,spec}.{ts,tsx}"],
+        },
+        resolve: {
+          alias: {
+            "@sw-editor/editor-core": fileURLToPath(
+              new URL(
+                "./packages/editor-core/src/index.ts",
+                import.meta.url,
+              ),
+            ),
+          },
+        },
+      }),
     ],
   },
 });
