@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "spec-kit-documentation": {
+      "type": "http",
+      "url": "https://gitmcp.io/github/spec-kit"
+    },
+    "serverless-workflow-specification-documentation": {
+      "type": "http",
+      "url": "https://gitmcp.io/serverlessworkflow/specification"
+    },
+    "serverless-workflow-sdk-typescript-documentation": {
+      "type": "http",
+      "url": "https://gitmcp.io/serverlessworkflow/sdk-typescript"
+    },
+    "rete-js-documentation": {
+      "type": "http",
+      "url": "https://gitmcp.io/retejs/rete"
+    },
+    "rete-lit-plugin-documentation": {
+      "type": "http",
+      "url": "https://gitmcp.io/retejs/lit-plugin"
+    },
+    "react-flow-documentation": {
+      "type": "http",
+      "url": "https://gitmcp.io/xyflow/xyflow"
+    }
+  }
+}
