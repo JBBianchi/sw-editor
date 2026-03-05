@@ -14,7 +14,7 @@
 - [x] T004 Implement source parse/serialize service in `packages/editor-core/src/source/`
 - [ ] T005 [P] Implement diagnostics model and event payload types in `packages/editor-core/src/diagnostics/`
 - [x] T006 [P] Implement host contract surface types in `packages/editor-host-client/src/contracts/`
-- [ ] T007 Implement monotonic revision tracking in `packages/editor-core/src/state/`
+- [x] T007 Implement monotonic revision tracking in `packages/editor-core/src/state/`
 - [ ] T008 Implement event bridge from core to web component in `packages/editor-web-component/src/events/`
 
 ## Phase 2b: Renderer Foundation (Blocking Prerequisites)
