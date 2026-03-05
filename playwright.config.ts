@@ -7,7 +7,7 @@ import { defineConfig, devices } from "@playwright/test";
  * The development server is expected to be running on port 4173 (Vite preview default).
  */
 export default defineConfig({
-  testDir: "./e2e",
+  testDir: "./tests/e2e",
   fullyParallel: true,
   /* Fail the build on CI if test.only is accidentally left in source. */
   forbidOnly: !!process.env.CI,
