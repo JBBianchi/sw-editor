@@ -8,6 +8,7 @@
  * @module events
  */
 export { EventBridge } from "./bridge.js";
+export { DiagnosticsEmitter } from "./diagnostics.js";
 export type {
   EditorDiagnosticsChangedEvent,
   EditorErrorEvent,
