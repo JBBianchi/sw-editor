@@ -11,6 +11,9 @@
     "build": "tsc --noEmit",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@serverlessworkflow/sdk": "1.0.1"
+  },
   "devDependencies": {
     "typescript": "5.9.3",
     "vitest": "4.0.18"
