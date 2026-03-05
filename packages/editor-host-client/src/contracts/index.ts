@@ -6,6 +6,12 @@
  *
  * @module contracts
  */
+export {
+  createCapabilitySnapshot,
+  CONTRACT_VERSION,
+  TARGET_VERSION,
+  SUPPORTED_VERSIONS,
+} from "./capabilities.js";
 export type {
   CapabilitySnapshot,
   RendererCapabilitySnapshot,
