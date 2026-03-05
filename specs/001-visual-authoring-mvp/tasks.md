@@ -56,7 +56,7 @@
 - [x] T022 [P] [US3] Implement debounced validation trigger in `packages/editor-core/src/validation/live-validator.ts`
 - [x] T023 [P] [US3] Implement explicit full validation command in `packages/editor-core/src/validation/full-validator.ts`
 - [x] T024 [US3] Implement diagnostics event payload emission in `packages/editor-web-component/src/events/diagnostics.ts`
-- [ ] T025 [US3] Implement diagnostics UI mapping and fallback behavior in `packages/editor-web-component/src/diagnostics/rendering.ts`
+- [x] T025 [US3] Implement diagnostics UI mapping and fallback behavior in `packages/editor-web-component/src/diagnostics/rendering.ts`
 - [x] T026 [US3] Add contract tests for diagnostics payloads in `tests/contract/editor-diagnostics.contract.spec.ts`
 
 ## Phase 6: Polish & Cross-Cutting Concerns
