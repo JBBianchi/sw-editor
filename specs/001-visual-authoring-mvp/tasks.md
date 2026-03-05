@@ -32,7 +32,7 @@
 
 - [ ] T013 [P] [US1] Add start/end synthetic node bootstrap logic in `packages/editor-core/src/graph/bootstrap.ts`
 - [ ] T014 [P] [US1] Add insertion command handling in `packages/editor-core/src/commands/insert-task.ts`
-- [ ] T015 [US1] Wire insertion affordance and focus behavior in `packages/editor-web-component/src/graph/insertion-ui.ts`
+- [x] T015 [US1] Wire insertion affordance and focus behavior in `packages/editor-web-component/src/graph/insertion-ui.ts`
 - [x] T016 [US1] Implement selection-driven property panel switching in `packages/editor-web-component/src/panel/panel-controller.ts`
 - [x] T017 [US1] Add export action and format selection in `packages/editor-host-client/src/export.ts`
 
