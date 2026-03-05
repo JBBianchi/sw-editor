@@ -59,6 +59,12 @@ export default defineConfig({
                 import.meta.url,
               ),
             ),
+            "@sw-editor/editor-core": fileURLToPath(
+              new URL(
+                "./packages/editor-core/src/index.ts",
+                import.meta.url,
+              ),
+            ),
           },
         },
       }),
