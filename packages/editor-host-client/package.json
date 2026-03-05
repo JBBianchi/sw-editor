@@ -5,14 +5,18 @@
   "description": "Thin host client providing the host-editor contract surface and export utilities",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./rete-lit": "./src/rete-lit.ts",
+    "./react-flow": "./src/react-flow.ts"
   },
   "scripts": {
     "build": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
-    "@sw-editor/editor-core": "workspace:*"
+    "@sw-editor/editor-core": "workspace:*",
+    "@sw-editor/editor-renderer-rete-lit": "workspace:*",
+    "@sw-editor/editor-renderer-react-flow": "workspace:*"
   },
   "devDependencies": {
     "typescript": "5.9.3",

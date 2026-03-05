@@ -39,6 +39,12 @@ importers:
       '@sw-editor/editor-core':
         specifier: workspace:*
         version: link:../editor-core
+      '@sw-editor/editor-renderer-react-flow':
+        specifier: workspace:*
+        version: link:../editor-renderer-react-flow
+      '@sw-editor/editor-renderer-rete-lit':
+        specifier: workspace:*
+        version: link:../editor-renderer-rete-lit
     devDependencies:
       typescript:
         specifier: 5.9.3
@@ -80,9 +86,27 @@ importers:
 
   packages/editor-renderer-rete-lit:
     dependencies:
+      '@retejs/lit-plugin':
+        specifier: ^2.0.0
+        version: 2.0.7(lit@3.3.2)(rete-area-plugin@2.1.5(rete@2.0.6))(rete-render-utils@2.0.3(rete-area-plugin@2.1.5(rete@2.0.6))(rete@2.0.6))(rete@2.0.6)
       '@sw-editor/editor-renderer-contract':
         specifier: workspace:*
         version: link:../editor-renderer-contract
+      lit:
+        specifier: ^3.0.0
+        version: 3.3.2
+      rete:
+        specifier: ^2.0.0
+        version: 2.0.6
+      rete-area-plugin:
+        specifier: ^2.0.0
+        version: 2.1.5(rete@2.0.6)
+      rete-connection-plugin:
+        specifier: ^2.0.0
+        version: 2.0.5(rete-area-plugin@2.1.5(rete@2.0.6))(rete@2.0.6)
+      rete-render-utils:
+        specifier: ^2.0.0
+        version: 2.0.3(rete-area-plugin@2.1.5(rete@2.0.6))(rete@2.0.6)
     devDependencies:
       typescript:
         specifier: 5.9.3
@@ -105,6 +129,10 @@ importers:
         version: 4.0.18
 
 packages:
+
+  '@babel/runtime@7.28.6':
+    resolution: {integrity: sha512-05WQkdpL9COIMz4LjTxGpPNCdlpyimKppYNoJ5Di5EUObifl8t4tuLuUBBZEpoLYOmfvIWrsp9fCl0HoPRVTdA==}
+    engines: {node: '>=6.9.0'}
 
   '@biomejs/biome@2.4.5':
     resolution: {integrity: sha512-OWNCyMS0Q011R6YifXNOg6qsOg64IVc7XX6SqGsrGszPbkVCoaO7Sr/lISFnXZ9hjQhDewwZ40789QmrG0GYgQ==}
@@ -322,10 +350,24 @@ packages:
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
+  '@lit-labs/ssr-dom-shim@1.5.1':
+    resolution: {integrity: sha512-Aou5UdlSpr5whQe8AA/bZG0jMj96CoJIWbGfZ91qieWu5AWUMKw8VR/pAkQkJYvBNhmCcWnZlyyk5oze8JIqYA==}
+
+  '@lit/reactive-element@2.1.2':
+    resolution: {integrity: sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A==}
+
   '@playwright/test@1.58.2':
     resolution: {integrity: sha512-akea+6bHYBBfA9uQqSYmlJXn61cTa+jbO87xVLCWbTqbWadRVmhxlXATaOjOgcBaWU4ePo0wB41KMFv3o35IXA==}
     engines: {node: '>=18'}
     hasBin: true
+
+  '@retejs/lit-plugin@2.0.7':
+    resolution: {integrity: sha512-jnrZ10lwmoxCi9eqViblAi7D8VxMrsGiS/tkn55YOR19xoGxF2Z9rzmdg0RfR8qsNHubHsQDjDFmGbL8tbDmbA==}
+    peerDependencies:
+      lit: ^3.0.0
+      rete: ^2.0.0
+      rete-area-plugin: ^2.0.0
+      rete-render-utils: ^2.0.0
 
   '@rollup/rollup-android-arm-eabi@4.59.0':
     resolution: {integrity: sha512-upnNBkA6ZH2VKGcBj9Fyl9IGNPULcjXRlg0LLeaioQWueH30p6IXtJEbKAgvyv+mJaMxSm1l6xwDXYjpEMiLMg==}
@@ -507,6 +549,9 @@ packages:
   '@types/react@19.2.14':
     resolution: {integrity: sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w==}
 
+  '@types/trusted-types@2.0.7':
+    resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
+
   '@vitest/expect@4.0.18':
     resolution: {integrity: sha512-8sCWUyckXXYvx4opfzVY03EOiYVxyNrHS5QxX3DAIi5dpJAAkyJezHCP77VMX4HKA2LDT/Jpfo8i2r5BE3GnQQ==}
 
@@ -658,6 +703,15 @@ packages:
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
 
+  lit-element@4.2.2:
+    resolution: {integrity: sha512-aFKhNToWxoyhkNDmWZwEva2SlQia+jfG0fjIWV//YeTaWrVnOxD89dPKfigCUspXFmjzOEUQpOkejH5Ly6sG0w==}
+
+  lit-html@3.3.2:
+    resolution: {integrity: sha512-Qy9hU88zcmaxBXcc10ZpdK7cOLXvXpRoBxERdtqV9QOrfpMZZ6pSYP91LhpPtap3sFMUiL7Tw2RImbe0Al2/kw==}
+
+  lit@3.3.2:
+    resolution: {integrity: sha512-NF9zbsP79l4ao2SNrH3NkfmFgN/hBYSQo90saIVI1o5GpjAdCPVstVzO1MrLOakHoEhYkrtRjPK6Ob521aoYWQ==}
+
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
@@ -705,6 +759,26 @@ packages:
   require-from-string@2.0.2:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
+
+  rete-area-plugin@2.1.5:
+    resolution: {integrity: sha512-iquEvwkQlcsO4cmgM3Z37TG0AWaE536dfA+lCJAze5YJzVx4RBaViUCqdB4dUA/utSytpBCkiDC4D3ztM9akGQ==}
+    peerDependencies:
+      rete: ^2.0.0
+
+  rete-connection-plugin@2.0.5:
+    resolution: {integrity: sha512-KFtlOyEJRc0y9STVgo2T+t+j9u5fxiTxbyzPbMCm0uqncb3b8d2ABDIzvWoNo5zQAh2Oz/OvlUovupbzrGzpSg==}
+    peerDependencies:
+      rete: ^2.0.1
+      rete-area-plugin: ^2.0.0
+
+  rete-render-utils@2.0.3:
+    resolution: {integrity: sha512-Oz4W2PNayHocRvlzadb5BCNf+tDzJ8RhTwB3ucBPCdCLKZ974wWDiTSCRfA287L2hmHVzRfBdyAwC03K9eP+4g==}
+    peerDependencies:
+      rete: ^2.0.0
+      rete-area-plugin: ^2.0.0
+
+  rete@2.0.6:
+    resolution: {integrity: sha512-kPmlKCGFES2VWtY7Y7SCB8ZeXRMsgX5deza9cu4OwmfM/ZUimd461kC3hRyccoyVxE4POlHUx0gg2jcGfusHFg==}
 
   rollup@4.59.0:
     resolution: {integrity: sha512-2oMpl67a3zCH9H79LeMcbDhXW/UmWG/y2zuqnF2jQq5uq9TbM9TVyXvA4+t+ne2IIkBdrLpAaRQAvo7YI/Yyeg==}
@@ -848,6 +922,8 @@ packages:
 
 snapshots:
 
+  '@babel/runtime@7.28.6': {}
+
   '@biomejs/biome@2.4.5':
     optionalDependencies:
       '@biomejs/cli-darwin-arm64': 2.4.5
@@ -963,9 +1039,22 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
+  '@lit-labs/ssr-dom-shim@1.5.1': {}
+
+  '@lit/reactive-element@2.1.2':
+    dependencies:
+      '@lit-labs/ssr-dom-shim': 1.5.1
+
   '@playwright/test@1.58.2':
     dependencies:
       playwright: 1.58.2
+
+  '@retejs/lit-plugin@2.0.7(lit@3.3.2)(rete-area-plugin@2.1.5(rete@2.0.6))(rete-render-utils@2.0.3(rete-area-plugin@2.1.5(rete@2.0.6))(rete@2.0.6))(rete@2.0.6)':
+    dependencies:
+      lit: 3.3.2
+      rete: 2.0.6
+      rete-area-plugin: 2.1.5(rete@2.0.6)
+      rete-render-utils: 2.0.3(rete-area-plugin@2.1.5(rete@2.0.6))(rete@2.0.6)
 
   '@rollup/rollup-android-arm-eabi@4.59.0':
     optional: true
@@ -1087,6 +1176,8 @@ snapshots:
   '@types/react@19.2.14':
     dependencies:
       csstype: 3.2.3
+
+  '@types/trusted-types@2.0.7': {}
 
   '@vitest/expect@4.0.18':
     dependencies:
@@ -1264,6 +1355,22 @@ snapshots:
 
   json-schema-traverse@1.0.0: {}
 
+  lit-element@4.2.2:
+    dependencies:
+      '@lit-labs/ssr-dom-shim': 1.5.1
+      '@lit/reactive-element': 2.1.2
+      lit-html: 3.3.2
+
+  lit-html@3.3.2:
+    dependencies:
+      '@types/trusted-types': 2.0.7
+
+  lit@3.3.2:
+    dependencies:
+      '@lit/reactive-element': 2.1.2
+      lit-element: 4.2.2
+      lit-html: 3.3.2
+
   magic-string@0.30.21:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
@@ -1300,6 +1407,27 @@ snapshots:
   react@19.2.4: {}
 
   require-from-string@2.0.2: {}
+
+  rete-area-plugin@2.1.5(rete@2.0.6):
+    dependencies:
+      '@babel/runtime': 7.28.6
+      rete: 2.0.6
+
+  rete-connection-plugin@2.0.5(rete-area-plugin@2.1.5(rete@2.0.6))(rete@2.0.6):
+    dependencies:
+      '@babel/runtime': 7.28.6
+      rete: 2.0.6
+      rete-area-plugin: 2.1.5(rete@2.0.6)
+
+  rete-render-utils@2.0.3(rete-area-plugin@2.1.5(rete@2.0.6))(rete@2.0.6):
+    dependencies:
+      '@babel/runtime': 7.28.6
+      rete: 2.0.6
+      rete-area-plugin: 2.1.5(rete@2.0.6)
+
+  rete@2.0.6:
+    dependencies:
+      '@babel/runtime': 7.28.6
 
   rollup@4.59.0:
     dependencies:
