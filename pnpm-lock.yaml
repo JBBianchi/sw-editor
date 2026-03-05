@@ -74,6 +74,9 @@ importers:
       '@sw-editor/editor-core':
         specifier: workspace:*
         version: link:../editor-core
+      '@sw-editor/editor-host-client':
+        specifier: workspace:*
+        version: link:../editor-host-client
     devDependencies:
       typescript:
         specifier: 5.9.3
