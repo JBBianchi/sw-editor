@@ -1,0 +1,21 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  packages/editor-core: {}
+
+  packages/editor-host-client: {}
+
+  packages/editor-renderer-contract: {}
+
+  packages/editor-renderer-react-flow: {}
+
+  packages/editor-renderer-rete-lit: {}
+
+  packages/editor-web-component: {}
