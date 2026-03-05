@@ -12,7 +12,7 @@
 ## Phase 2: Foundational (Blocking Prerequisites)
 
 - [x] T004 Implement source parse/serialize service in `packages/editor-core/src/source/`
-- [ ] T005 [P] Implement diagnostics model and event payload types in `packages/editor-core/src/diagnostics/`
+- [x] T005 [P] Implement diagnostics model and event payload types in `packages/editor-core/src/diagnostics/`
 - [x] T006 [P] Implement host contract surface types in `packages/editor-host-client/src/contracts/`
 - [x] T007 Implement monotonic revision tracking in `packages/editor-core/src/state/`
 - [x] T008 Implement event bridge from core to web component in `packages/editor-web-component/src/events/`
@@ -30,8 +30,8 @@
 
 **Independent Test**: Build a new workflow visually and export valid source.
 
-- [ ] T013 [P] [US1] Add start/end synthetic node bootstrap logic in `packages/editor-core/src/graph/bootstrap.ts`
-- [ ] T014 [P] [US1] Add insertion command handling in `packages/editor-core/src/commands/insert-task.ts`
+- [x] T013 [P] [US1] Add start/end synthetic node bootstrap logic in `packages/editor-core/src/graph/bootstrap.ts`
+- [x] T014 [P] [US1] Add insertion command handling in `packages/editor-core/src/commands/insert-task.ts`
 - [x] T015 [US1] Wire insertion affordance and focus behavior in `packages/editor-web-component/src/graph/insertion-ui.ts`
 - [x] T016 [US1] Implement selection-driven property panel switching in `packages/editor-web-component/src/panel/panel-controller.ts`
 - [x] T017 [US1] Add export action and format selection in `packages/editor-host-client/src/export.ts`
@@ -63,6 +63,6 @@
 
 - [x] T027 [P] Add keyboard and screen-reader checks for core flows in `tests/e2e/accessibility-mvp.spec.ts`
 - [x] T028 [P] Add performance measurement harness for validation latency in `tests/integration/validation-latency.spec.ts`
-- [ ] T029 Run quickstart scenarios from `specs/001-visual-authoring-mvp/quickstart.md` and capture results
+- [x] T029 Run quickstart scenarios from `specs/001-visual-authoring-mvp/quickstart.md` and capture results
 - [ ] T030 [P] Add renderer-matrix contract tests for `getCapabilities()` payload in `tests/contract/renderer-capabilities.contract.spec.ts`
 - [ ] T031 [P] Add renderer-matrix integration tests for create/load/edit/export/validate parity in `tests/integration/renderer-mvp-parity.spec.ts`
