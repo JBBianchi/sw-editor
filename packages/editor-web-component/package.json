@@ -1,0 +1,21 @@
+{
+  "name": "@sw-editor/editor-web-component",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Embeddable web component integrating editor core with the active renderer",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sw-editor/editor-core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vitest": "4.0.18"
+  }
+}
