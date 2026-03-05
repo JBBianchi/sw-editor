@@ -1,0 +1,14 @@
+# Invalid fixture: 'do' field has wrong type (object instead of array).
+# Expected behaviour: schema validation MUST reject this workflow.
+# Schema violation: 'do' must be an ordered array of named task entries.
+document:
+  dsl: '1.0.0'
+  namespace: fixtures
+  name: wrong-do-type
+  version: '1.0.0'
+do:
+  fetchData:
+    call: http
+    with:
+      method: get
+      endpoint: https://api.example.com/data

@@ -1,0 +1,89 @@
+{
+  "document": {
+    "dsl": "1.0.0",
+    "namespace": "fixtures",
+    "name": "parallel-notifications",
+    "version": "1.0.0"
+  },
+  "input": {
+    "schema": {
+      "format": "json",
+      "document": {
+        "type": "object",
+        "required": ["userId", "message"],
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string",
+            "description": "Notification message (supports Unicode: \u00e9\u00e0\u00fc\u4e2d\u6587)"
+          }
+        }
+      }
+    }
+  },
+  "do": [
+    {
+      "sendNotifications": {
+        "fork": {
+          "compete": false,
+          "branches": [
+            {
+              "sendEmail": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/notify/email",
+                  "body": {
+                    "userId": "${ .userId }",
+                    "message": "${ .message }"
+                  }
+                }
+              }
+            },
+            {
+              "sendSms": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/notify/sms",
+                  "body": {
+                    "userId": "${ .userId }",
+                    "message": "${ .message }"
+                  }
+                }
+              }
+            },
+            {
+              "sendPush": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/notify/push",
+                  "body": {
+                    "userId": "${ .userId }",
+                    "message": "${ .message }"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "logResult": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/audit/log",
+          "body": {
+            "userId": "${ .userId }",
+            "action": "notifications_sent"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+# Invalid fixture: 'document' block is present but missing required fields.
+# Required fields omitted: 'dsl', 'namespace', 'name', 'version'.
+# Expected behaviour: schema validation MUST reject this workflow.
+document:
+  description: This document block is missing all required fields
+do:
+  - fetchData:
+      call: http
+      with:
+        method: get
+        endpoint: https://api.example.com/data
