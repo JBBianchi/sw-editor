@@ -15,6 +15,11 @@
     <header>
       <!-- Toolbar: workflow-level actions required by quickstart and accessibility scenarios -->
       <button type="button" aria-label="Create new workflow">New Workflow</button>
+      <label for="renderer-select" style="margin-left:1rem;font-size:0.875rem;">Renderer:</label>
+      <select id="renderer-select" aria-label="Select renderer" style="margin-left:0.25rem;">
+        <option value="rete-lit">rete-lit</option>
+        <option value="react-flow">react-flow</option>
+      </select>
     </header>
     <main>
       <sw-editor id="editor" style="width:100%;height:100%;position:relative;"></sw-editor>
