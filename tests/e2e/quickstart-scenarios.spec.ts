@@ -62,37 +62,63 @@ async function openEditor(page: Page): Promise<void> {
 // Scenario 1: Create New Workflow
 // ---------------------------------------------------------------------------
 
-test.describe
-  .fixme("Quickstart Scenario 1: Create New Workflow", () => {
-    test("opens editor to empty state", async ({ page }) => {
-      await openEditor(page);
+test.describe("Quickstart Scenario 1: Create New Workflow", () => {
+  /**
+   * Verifies that navigating to the editor host page attaches the `sw-editor`
+   * custom element to the DOM.  The element auto-bootstraps an empty workflow
+   * graph (start → end) on connection, so no additional user action is needed
+   * to reach the initial graph state.
+   *
+   * Quickstart step: "Open editor host page with empty state."
+   */
+  test("opens editor to empty state", async ({ page }) => {
+    await openEditor(page);
 
-      const editorEl = page.locator(EDITOR_ELEMENT);
-      await expect(editorEl).toBeAttached();
-    });
-
-    test("creates a new workflow with start and end nodes", async ({ page }) => {
-      await openEditor(page);
-
-      const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
-      await newWorkflowBtn.focus();
-      await newWorkflowBtn.press("Enter");
-
-      await expect(page.locator('[data-node-type="start"]')).toBeVisible();
-      await expect(page.locator('[data-node-type="end"]')).toBeVisible();
-    });
-
-    test("workflow properties panel is visible after creation", async ({ page }) => {
-      await openEditor(page);
-
-      const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
-      await newWorkflowBtn.press("Enter");
-
-      const panel = page.locator(PROPERTY_PANEL_SELECTOR);
-      await expect(panel).toBeVisible();
-    });
+    const editorEl = page.locator(EDITOR_ELEMENT);
+    await expect(editorEl).toBeAttached();
   });
 
+  /**
+   * Verifies that activating the "Create new workflow" button produces a graph
+   * with visible start and end boundary nodes.
+   *
+   * Marked fixme: the `button[aria-label="Create new workflow"]` affordance and
+   * the `data-node-type` attributes on rendered graph nodes are not yet present
+   * in the demo harness.  Remove fixme once the button and node attributes land.
+   *
+   * Quickstart steps: "Create new workflow." / "Verify graph starts with start
+   * and end nodes."
+   */
+  test.fixme("creates a new workflow with start and end nodes", async ({ page }) => {
+    await openEditor(page);
+
+    const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
+    await newWorkflowBtn.focus();
+    await newWorkflowBtn.press("Enter");
+
+    await expect(page.locator('[data-node-type="start"]')).toBeVisible();
+    await expect(page.locator('[data-node-type="end"]')).toBeVisible();
+  });
+
+  /**
+   * Verifies that the properties panel is visible after creating a new workflow.
+   *
+   * Marked fixme: the "Create new workflow" button is not yet rendered by the
+   * demo harness, so this test cannot progress past the button interaction.
+   * Remove fixme once the button is implemented.
+   *
+   * Quickstart step: "initial graph and workflow panel state are available."
+   */
+  test.fixme("workflow properties panel is visible after creation", async ({ page }) => {
+    await openEditor(page);
+
+    const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
+    await newWorkflowBtn.press("Enter");
+
+    const panel = page.locator(PROPERTY_PANEL_SELECTOR);
+    await expect(panel).toBeVisible();
+  });
+});
 // ---------------------------------------------------------------------------
 // Scenario 2: Insert And Edit Task
 // ---------------------------------------------------------------------------
@@ -153,7 +179,6 @@ test.describe("Quickstart Scenario 2: Insert And Edit Task", () => {
     await expect(page.locator('[data-testid="graph-node"]').first()).toContainText("my-call-task");
   });
 });
-
 // ---------------------------------------------------------------------------
 // Scenario 3: Load Existing YAML
 // ---------------------------------------------------------------------------
