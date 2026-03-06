@@ -1,4 +1,4 @@
-# Coding Agent Playbook (Spec Kit)
+﻿# Coding Agent Playbook (Spec Kit)
 
 This repository uses GitHub Spec Kit feature packages under `specs/`.
 Agents must follow the Spec Kit workflow for both specification changes and implementation work.
