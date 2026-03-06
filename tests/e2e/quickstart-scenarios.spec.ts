@@ -272,7 +272,6 @@ test.describe("Quickstart Scenario 3: Load Existing YAML", () => {
   });
 });
 
-
 // ---------------------------------------------------------------------------
 // Scenario 4: Diagnostics Flow
 // ---------------------------------------------------------------------------
@@ -429,53 +428,82 @@ test.describe("Quickstart Scenario 4: Diagnostics Flow", () => {
 // Scenario 5: Privacy Guardrail
 // ---------------------------------------------------------------------------
 
-test.describe
-  .fixme("Quickstart Scenario 5: Privacy Guardrail", () => {
-    test("create/load/edit/export flow completes without outbound network requests", async ({
-      page,
-    }) => {
-      // Intercept and record any outbound requests that are not local.
-      const externalRequests: string[] = [];
-      page.on("request", (req) => {
-        const url = req.url();
-        if (!url.startsWith("http://localhost") && !url.startsWith("http://127.0.0.1")) {
-          externalRequests.push(url);
-        }
-      });
-
-      await openEditor(page);
-
-      const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
-      await newWorkflowBtn.press("Enter");
-
-      // Insert a task.
-      const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
-      await affordance.press("Enter");
-      const firstItem = page.locator(TASK_MENU_ITEM_SELECTOR).first();
-      await firstItem.press("Enter");
-
-      // Export the workflow.
-      const exportBtn = page.locator(EXPORT_BUTTON_SELECTOR);
-      await exportBtn.press("Enter");
-
-      expect(
-        externalRequests,
-        `Editor must not initiate external network requests; observed: ${externalRequests.join(", ")}`,
-      ).toHaveLength(0);
+test.describe("Quickstart Scenario 5: Privacy Guardrail", () => {
+  /**
+   * Verifies that loading a YAML workflow via the demo harness (textarea +
+   * load button) produces no requests to external URLs.  Uses `page.route` to
+   * intercept every network request and record its URL so that external
+   * destinations can be detected and failed.
+   *
+   * Only origins matching `localhost` or `127.0.0.1` are permitted, matching
+   * the Vite preview server (`localhost:4173`).
+   *
+   * Quickstart steps: "Run editor in offline environment." /
+   * "Repeat create/load/edit/export flow."
+   */
+  test("load YAML flow produces no requests to external URLs", async ({ page }) => {
+    // Intercept and record every network request.
+    const networkRequests: string[] = [];
+    await page.route("**", (route) => {
+      networkRequests.push(route.request().url());
+      route.continue();
     });
 
-    test("editor loads and renders without any remote resource dependencies", async ({ page }) => {
-      const failedRequests: string[] = [];
-      page.on("requestfailed", (req) => {
-        failedRequests.push(req.url());
-      });
+    await openEditor(page);
 
-      await openEditor(page);
+    // Load a YAML workflow via the demo harness (implemented in Scenario 3).
+    await loadYaml(page, SIMPLE_YAML_FIXTURE, SIMPLE_YAML_NODE_COUNT);
 
-      // No failed requests (including remote ones) should occur during boot.
-      expect(
-        failedRequests,
-        `Unexpected failed requests during editor load: ${failedRequests.join(", ")}`,
-      ).toHaveLength(0);
-    });
+    // Only localhost / 127.0.0.1 requests are permitted.
+    const externalRequests = networkRequests.filter(
+      (url) => !url.startsWith("http://localhost") && !url.startsWith("http://127.0.0.1"),
+    );
+
+    expect(
+      externalRequests,
+      `Editor must not initiate external network requests; observed: ${externalRequests.join(", ")}`,
+    ).toHaveLength(0);
   });
+
+  /**
+   * Verifies that the full create/insert/export flow (once those affordances
+   * are implemented) produces no requests to external URLs.
+   *
+   * Marked fixme: the "Create new workflow" button, insertion affordance, and
+   * export button are not yet present in the demo harness.  Remove fixme once
+   * those UI elements land.
+   */
+  test.fixme("create/insert/export flow completes without outbound network requests", async ({
+    page,
+  }) => {
+    const networkRequests: string[] = [];
+    await page.route("**", (route) => {
+      networkRequests.push(route.request().url());
+      route.continue();
+    });
+
+    await openEditor(page);
+
+    const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
+    await newWorkflowBtn.press("Enter");
+
+    // Insert a task.
+    const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
+    await affordance.press("Enter");
+    const firstItem = page.locator(TASK_MENU_ITEM_SELECTOR).first();
+    await firstItem.press("Enter");
+
+    // Export the workflow.
+    const exportBtn = page.locator(EXPORT_BUTTON_SELECTOR);
+    await exportBtn.press("Enter");
+
+    const externalRequests = networkRequests.filter(
+      (url) => !url.startsWith("http://localhost") && !url.startsWith("http://127.0.0.1"),
+    );
+
+    expect(
+      externalRequests,
+      `Editor must not initiate external network requests; observed: ${externalRequests.join(", ")}`,
+    ).toHaveLength(0);
+  });
+});
