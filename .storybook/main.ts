@@ -1,3 +1,12 @@
+/**
+ * Storybook configuration — React + vanilla HTML/Web Components
+ *
+ * Framework choice: We use `@storybook/react-vite` as the single framework
+ * because Storybook only supports one framework per instance. Vanilla DOM
+ * and Web Component stories coexist by using the `htmlStory` wrapper from
+ * `.storybook/html-story.tsx`, which mounts plain HTMLElements inside a
+ * React host component. See that file for usage examples.
+ */
 import { resolve } from "node:path";
 import type { StorybookConfig } from "@storybook/react-vite";
 
