@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>sw-editor — Demo Harness</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { display: flex; flex-direction: column; height: 100vh; font-family: system-ui, sans-serif; }
+      main { flex: 1; display: flex; overflow: hidden; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <sw-editor id="editor" style="width:100%;height:600px;"></sw-editor>
+
+      <!-- Properties panel region — required by accessibility tests -->
+      <aside role="region" aria-label="Properties panel"></aside>
+
+      <!-- ARIA live region for screen-reader announcements -->
+      <div aria-live="polite" aria-atomic="true" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"></div>
+    </main>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
