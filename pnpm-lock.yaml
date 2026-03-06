@@ -21,14 +21,14 @@ importers:
         specifier: 4.0.18
         version: 4.0.18(@types/node@25.3.3)(happy-dom@20.8.3)
 
-  demo:
+  example/e2e-harness:
     dependencies:
       '@sw-editor/editor-core':
         specifier: workspace:*
-        version: link:../packages/editor-core
+        version: link:../../packages/editor-core
       '@sw-editor/editor-host-client':
         specifier: workspace:*
-        version: link:../packages/editor-host-client
+        version: link:../../packages/editor-host-client
     devDependencies:
       typescript:
         specifier: 5.9.3
