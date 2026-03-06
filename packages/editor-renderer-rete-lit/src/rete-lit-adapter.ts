@@ -10,8 +10,10 @@
 import type { LitArea2D } from "@retejs/lit-plugin";
 import { LitPlugin, Presets } from "@retejs/lit-plugin";
 import type {
+  FocusTarget,
   RendererAdapter,
   RendererCapabilitySnapshot,
+  RendererEdgeAnchor,
   RendererEventBridge,
   RendererSelectionEvent,
   RendererSelectionHandler,
@@ -304,6 +306,20 @@ export class ReteLitAdapter implements RendererAdapter {
    */
   private readonly reteConnToGraphId = new Map<string, string>();
 
+  /**
+   * Maps a workflow graph node id to the corresponding Rete node id.
+   *
+   * Inverse of {@link reteNodeToGraphId}; rebuilt on every {@link applyGraph} call.
+   */
+  private readonly graphIdToReteNode = new Map<string, string>();
+
+  /**
+   * Maps a workflow graph edge id to the corresponding Rete connection id.
+   *
+   * Inverse of {@link reteConnToGraphId}; rebuilt on every {@link applyGraph} call.
+   */
+  private readonly graphIdToReteConn = new Map<string, string>();
+
   constructor() {
     this.bridge = new ReteLitEventBridge();
     this.events = this.bridge;
@@ -375,6 +391,70 @@ export class ReteLitAdapter implements RendererAdapter {
   }
 
   /**
+   * Retrieve the visual anchor point for the given edge.
+   *
+   * Calculates the geometric midpoint between the source and target node
+   * positions in the Rete area. Returns `null` if the adapter is not mounted,
+   * the edge is unknown, or the node views are unavailable.
+   *
+   * @param edgeId - The workflow graph edge identity to query.
+   * @returns The edge anchor with midpoint coordinates, or `null` if unavailable.
+   */
+  getEdgeAnchor(edgeId: string): RendererEdgeAnchor | null {
+    if (this.mounted === null) return null;
+
+    const reteConnId = this.graphIdToReteConn.get(edgeId);
+    if (reteConnId === undefined) return null;
+
+    const { editor, area } = this.mounted;
+    const conn = editor.getConnection(reteConnId);
+    if (conn === undefined) return null;
+
+    const sourceView = area.nodeViews.get(conn.source);
+    const targetView = area.nodeViews.get(conn.target);
+    if (sourceView === undefined || targetView === undefined) return null;
+
+    const sourceGraphId = this.reteNodeToGraphId.get(conn.source);
+    const targetGraphId = this.reteNodeToGraphId.get(conn.target);
+    if (sourceGraphId === undefined || targetGraphId === undefined) return null;
+
+    return {
+      edgeId,
+      sourceNodeId: sourceGraphId,
+      targetNodeId: targetGraphId,
+      x: (sourceView.position.x + targetView.position.x) / 2,
+      y: (sourceView.position.y + targetView.position.y) / 2,
+    };
+  }
+
+  /**
+   * Bring a node into view in the renderer viewport.
+   *
+   * Scrolls and zooms the viewport to center the target node using
+   * {@link AreaExtensions.zoomAt}, then attempts to set DOM focus on the
+   * node's rendered element.
+   *
+   * @param target - Describes which node to focus and the desired behavior.
+   */
+  focusNode(target: FocusTarget): void {
+    if (this.mounted === null) return;
+
+    const reteNodeId = this.graphIdToReteNode.get(target.nodeId);
+    if (reteNodeId === undefined) return;
+
+    const { editor, area } = this.mounted;
+    const node = editor.getNode(reteNodeId);
+    if (node === undefined) return;
+
+    void AreaExtensions.zoomAt(area, [node]);
+
+    const nodeView = area.nodeViews.get(reteNodeId);
+    if (nodeView?.element) {
+      nodeView.element.focus();
+    }
+  }
+
+  /**
    * Release all renderer resources and detach from the DOM.
    *
    * Destroys the Rete `AreaPlugin`, clears the selection handler, and resets
@@ -390,6 +470,8 @@ export class ReteLitAdapter implements RendererAdapter {
     this.bridge.offSelectionChange();
     this.reteNodeToGraphId.clear();
     this.reteConnToGraphId.clear();
+    this.graphIdToReteNode.clear();
+    this.graphIdToReteConn.clear();
     this.mounted = null;
   }
 
@@ -418,6 +500,8 @@ export class ReteLitAdapter implements RendererAdapter {
 
     this.reteNodeToGraphId.clear();
     this.reteConnToGraphId.clear();
+    this.graphIdToReteNode.clear();
+    this.graphIdToReteConn.clear();
 
     const socket = new ClassicPreset.Socket("workflow");
     const reteNodeMap = new Map<string, ClassicPreset.Node>();
@@ -437,6 +521,7 @@ export class ReteLitAdapter implements RendererAdapter {
       xOffset += NODE_GAP;
 
       this.reteNodeToGraphId.set(node.id, graphNode.id);
+      this.graphIdToReteNode.set(graphNode.id, node.id);
       reteNodeMap.set(graphNode.id, node);
     }
 
@@ -449,6 +534,7 @@ export class ReteLitAdapter implements RendererAdapter {
       const conn = new ClassicPreset.Connection(sourceNode, "out", targetNode, "in");
       await editor.addConnection(conn);
       this.reteConnToGraphId.set(conn.id, graphEdge.id);
+      this.graphIdToReteConn.set(graphEdge.id, conn.id);
     }
 
     void AreaExtensions.zoomAt(area, editor.getNodes());

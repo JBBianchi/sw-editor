@@ -107,7 +107,9 @@ export class InsertionUI {
   private readonly counter: RevisionCounter;
   private readonly serializeGraph: SerializeGraphCallback;
   private readonly focusNode: FocusNodeCallback | undefined;
-  private readonly rendererAdapter: RendererAdapter | undefined;
+  private readonly rendererAdapter:
+    | Pick<RendererAdapter, "getEdgeAnchor" | "focusNode">
+    | undefined;
 
   /** Live graph reference; must be kept current by the host. */
   private graph: WorkflowGraph;
@@ -136,8 +138,8 @@ export class InsertionUI {
    *   to a {@link WorkflowSource} for the `workflowChanged` event payload.
    * @param options.focusNode - Optional renderer callback that moves DOM focus
    *   to the node with the given ID.
-   * @param options.rendererAdapter - Optional {@link RendererAdapter} used to
-   *   query edge anchors for positioning and to delegate focus after insertion.
+   * @param options.rendererAdapter - Optional renderer adapter used for
+   *   edge anchor positioning and post-insertion focus delegation.
    */
   constructor(options: {
     container: HTMLElement;
@@ -146,7 +148,7 @@ export class InsertionUI {
     counter: RevisionCounter;
     serializeGraph: SerializeGraphCallback;
     focusNode?: FocusNodeCallback;
-    rendererAdapter?: RendererAdapter;
+    rendererAdapter?: Pick<RendererAdapter, "getEdgeAnchor" | "focusNode">;
   }) {
     this.container = options.container;
     this.bridge = options.bridge;
@@ -180,8 +182,7 @@ export class InsertionUI {
 
     const button = this.createAffordanceButton(edgeId);
 
-    // Position the button at the edge midpoint when the renderer adapter
-    // provides anchor coordinates.
+    // If a renderer adapter is available, query it for anchor positioning.
     if (this.rendererAdapter?.getEdgeAnchor) {
       const edgeAnchor = this.rendererAdapter.getEdgeAnchor(edgeId);
       if (edgeAnchor) {
@@ -449,8 +450,7 @@ export class InsertionUI {
     // without lifting their hands from the keyboard (FR-005).
     if (this.rendererAdapter?.focusNode) {
       this.rendererAdapter.focusNode({ nodeId: result.nodeId, behavior: "center" });
-    } else {
-      this.focusNode?.(result.nodeId);
     }
+    this.focusNode?.(result.nodeId);
   }
 }

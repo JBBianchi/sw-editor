@@ -12,11 +12,7 @@
 import { END_NODE_ID, START_NODE_ID } from "@sw-editor/editor-core";
 import { describe, expect, it } from "vitest";
 
-import {
-  assertNodeOrder,
-  insertTaskAtEdge,
-  loadFixtureGraph,
-} from "./insertion-layout.helpers.js";
+import { assertNodeOrder, insertTaskAtEdge, loadFixtureGraph } from "./insertion-layout.helpers.js";
 
 describe("insertion-layout-order — US1: node ordering after insert", () => {
   // -------------------------------------------------------------------------
@@ -62,13 +58,7 @@ describe("insertion-layout-order — US1: node ordering after insert", () => {
       const result = insertTaskAtEdge(graph, edgeId, "middleTask");
 
       // The new node must appear between taskA and taskB
-      assertNodeOrder(result.graph, [
-        START_NODE_ID,
-        "taskA",
-        result.nodeId,
-        "taskB",
-        END_NODE_ID,
-      ]);
+      assertNodeOrder(result.graph, [START_NODE_ID, "taskA", result.nodeId, "taskB", END_NODE_ID]);
     });
 
     it("inserts at the beginning of a linear chain", () => {
@@ -78,13 +68,7 @@ describe("insertion-layout-order — US1: node ordering after insert", () => {
       const edgeId = `${START_NODE_ID}->taskA`;
       const result = insertTaskAtEdge(graph, edgeId, "firstTask");
 
-      assertNodeOrder(result.graph, [
-        START_NODE_ID,
-        result.nodeId,
-        "taskA",
-        "taskB",
-        END_NODE_ID,
-      ]);
+      assertNodeOrder(result.graph, [START_NODE_ID, result.nodeId, "taskA", "taskB", END_NODE_ID]);
     });
 
     it("inserts at the end of a linear chain", () => {
@@ -94,13 +78,7 @@ describe("insertion-layout-order — US1: node ordering after insert", () => {
       const edgeId = `taskB->${END_NODE_ID}`;
       const result = insertTaskAtEdge(graph, edgeId, "lastTask");
 
-      assertNodeOrder(result.graph, [
-        START_NODE_ID,
-        "taskA",
-        "taskB",
-        result.nodeId,
-        END_NODE_ID,
-      ]);
+      assertNodeOrder(result.graph, [START_NODE_ID, "taskA", "taskB", result.nodeId, END_NODE_ID]);
     });
   });
 

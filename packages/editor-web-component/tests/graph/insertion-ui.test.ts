@@ -47,9 +47,10 @@ function makeHarness(focusNode?: FocusNodeCallback) {
  * Creates a minimal mock of the renderer adapter with stubbed
  * `getEdgeAnchor` and `focusNode` methods.
  */
-function makeMockRendererAdapter(
-  anchorOverride?: RendererEdgeAnchor | null,
-): Pick<RendererAdapter, "getEdgeAnchor" | "focusNode"> & {
+function makeMockRendererAdapter(anchorOverride?: RendererEdgeAnchor | null): Pick<
+  RendererAdapter,
+  "getEdgeAnchor" | "focusNode"
+> & {
   getEdgeAnchor: ReturnType<typeof vi.fn>;
   focusNode: ReturnType<typeof vi.fn>;
 } {
@@ -63,9 +64,7 @@ function makeMockRendererAdapter(
  * Creates a test harness that passes a renderer adapter to InsertionUI,
  * enabling renderer-anchor–based positioning and focus delegation.
  */
-function makeHarnessWithAdapter(
-  adapter: Pick<RendererAdapter, "getEdgeAnchor" | "focusNode">,
-) {
+function makeHarnessWithAdapter(adapter: Pick<RendererAdapter, "getEdgeAnchor" | "focusNode">) {
   const graph = bootstrapWorkflowGraph();
   const counter = new RevisionCounter();
   const eventTarget = new EventTarget();
