@@ -119,67 +119,66 @@ test.describe("Quickstart Scenario 1: Create New Workflow", () => {
     await expect(panel).toBeVisible();
   });
 });
-
 // ---------------------------------------------------------------------------
 // Scenario 2: Insert And Edit Task
 // ---------------------------------------------------------------------------
 
-test.describe
-  .fixme("Quickstart Scenario 2: Insert And Edit Task", () => {
-    test.beforeEach(async ({ page }) => {
-      await openEditor(page);
-      const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
-      await newWorkflowBtn.press("Enter");
-    });
-
-    test("insertion affordance is present between connected nodes", async ({ page }) => {
-      const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
-      await expect(affordance).toBeVisible();
-    });
-
-    test("selecting Call task from menu inserts it into the graph", async ({ page }) => {
-      const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
-      await affordance.press("Enter");
-
-      await expect(page.locator(TASK_MENU_SELECTOR)).toBeVisible();
-
-      // Select the first menu item (expected to be the Call task type).
-      const firstItem = page.locator(TASK_MENU_ITEM_SELECTOR).first();
-      await firstItem.press("Enter");
-
-      await expect(page.locator(TASK_MENU_SELECTOR)).not.toBeVisible();
-      await expect(page.locator('[data-testid="graph-node"]')).not.toHaveCount(0);
-    });
-
-    test("inserted task is selected and panel reflects its properties", async ({ page }) => {
-      const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
-      await affordance.press("Enter");
-
-      const firstItem = page.locator(TASK_MENU_ITEM_SELECTOR).first();
-      await firstItem.press("Enter");
-
-      const panel = page.locator(PROPERTY_PANEL_SELECTOR);
-      await expect(panel).toBeVisible();
-    });
-
-    test("editing task properties in panel updates the graph and source", async ({ page }) => {
-      const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
-      await affordance.press("Enter");
-
-      const firstItem = page.locator(TASK_MENU_ITEM_SELECTOR).first();
-      await firstItem.press("Enter");
-
-      const panel = page.locator(PROPERTY_PANEL_SELECTOR);
-      const nameInput = panel.locator("input, textarea, [role='textbox']").first();
-      await nameInput.fill("my-call-task");
-
-      // The graph node label should reflect the updated name.
-      await expect(page.locator('[data-testid="graph-node"]').first()).toContainText(
-        "my-call-task",
-      );
-    });
+test.describe("Quickstart Scenario 2: Insert And Edit Task", () => {
+  test.beforeEach(async ({ page }) => {
+    await openEditor(page);
+    // The sw-editor auto-bootstraps on mount; pressing "Create new workflow"
+    // resets to a clean state, matching the scenario starting condition.
+    const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
+    await newWorkflowBtn.press("Enter");
   });
 
+  test("insertion affordance is present between connected nodes", async ({ page }) => {
+    const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
+    await expect(affordance).toBeVisible();
+  });
+
+  test("selecting Call task from menu inserts it into the graph", async ({ page }) => {
+    const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
+    await affordance.press("Enter");
+
+    await expect(page.locator(TASK_MENU_SELECTOR)).toBeVisible();
+
+    // Select the first menu item (expected to be the Call task type).
+    const firstItem = page.locator(TASK_MENU_ITEM_SELECTOR).first();
+    await firstItem.press("Enter");
+
+    await expect(page.locator(TASK_MENU_SELECTOR)).not.toBeVisible();
+    await expect(page.locator('[data-testid="graph-node"]')).not.toHaveCount(0);
+  });
+
+  test("inserted task is selected and panel reflects its properties", async ({ page }) => {
+    const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
+    await affordance.press("Enter");
+
+    const firstItem = page.locator(TASK_MENU_ITEM_SELECTOR).first();
+    await firstItem.press("Enter");
+
+    const panel = page.locator(PROPERTY_PANEL_SELECTOR);
+    await expect(panel).toBeVisible();
+  });
+
+  test.fixme("editing task properties in panel updates the graph and source", async ({ page }) => {
+    // Requires a wired property panel with editable inputs — not yet
+    // implemented in the demo harness.
+    const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
+    await affordance.press("Enter");
+
+    const firstItem = page.locator(TASK_MENU_ITEM_SELECTOR).first();
+    await firstItem.press("Enter");
+
+    const panel = page.locator(PROPERTY_PANEL_SELECTOR);
+    const nameInput = panel.locator("input, textarea, [role='textbox']").first();
+    await nameInput.fill("my-call-task");
+
+    // The graph node label should reflect the updated name.
+    await expect(page.locator('[data-testid="graph-node"]').first()).toContainText("my-call-task");
+  });
+});
 // ---------------------------------------------------------------------------
 // Scenario 3: Load Existing YAML
 // ---------------------------------------------------------------------------
