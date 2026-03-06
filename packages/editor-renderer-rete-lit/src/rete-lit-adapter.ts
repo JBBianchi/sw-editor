@@ -7,13 +7,15 @@
  * @module
  */
 
-import { ClassicPreset, GetSchemes, NodeEditor } from "rete";
+import { ClassicPreset, NodeEditor } from "rete";
+import type { GetSchemes } from "rete";
 import { AreaExtensions, AreaPlugin } from "rete-area-plugin";
 import {
   ConnectionPlugin,
   Presets as ConnectionPresets,
 } from "rete-connection-plugin";
-import { LitPlugin, LitArea2D, Presets } from "@retejs/lit-plugin";
+import { LitPlugin, Presets } from "@retejs/lit-plugin";
+import type { LitArea2D } from "@retejs/lit-plugin";
 
 import type {
   RendererAdapter,
@@ -156,11 +158,11 @@ class TrackingSelector extends AreaExtensions.Selector<SelectorEntity> {
    * @param entity - The entity to add.
    * @param accumulate - Whether to keep existing selections.
    */
-  override add(entity: SelectorEntity, accumulate: boolean): void {
+  override async add(entity: SelectorEntity, accumulate: boolean): Promise<void> {
     if (!accumulate) {
       this.selected.clear();
     }
-    super.add(entity, accumulate);
+    await super.add(entity, accumulate);
     this.selected.set(this.entityKey(entity), entity);
     this.scheduleEmit();
   }
@@ -170,13 +172,13 @@ class TrackingSelector extends AreaExtensions.Selector<SelectorEntity> {
    *
    * @param entity - The entity to remove.
    */
-  override remove(entity: SelectorEntity): void {
-    super.remove(entity);
+  override async remove(entity: Pick<SelectorEntity, "id" | "label">): Promise<void> {
+    await super.remove(entity);
     this.selected.delete(this.entityKey(entity));
     this.scheduleEmit();
   }
 
-  private entityKey(entity: SelectorEntity): string {
+  private entityKey(entity: Pick<SelectorEntity, "id" | "label">): string {
     return `${entity.label}:${entity.id}`;
   }
 
