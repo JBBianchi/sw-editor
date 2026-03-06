@@ -18,10 +18,7 @@
  */
 
 import { ReactFlowAdapter } from "@sw-editor/editor-renderer-react-flow";
-import {
-  createCapabilitySnapshot,
-  type CapabilitySnapshot,
-} from "./contracts/capabilities.js";
+import { type CapabilitySnapshot, createCapabilitySnapshot } from "./contracts/capabilities.js";
 
 // Instantiate a transient adapter solely to read its static capability snapshot.
 // The adapter is not mounted and will not render anything; `capabilities` is a
@@ -32,9 +29,7 @@ const _adapter = new ReactFlowAdapter();
  * The capability snapshot for the `react-flow` renderer bundle, computed once
  * at module evaluation time and frozen for the lifetime of the process.
  */
-const _snapshot: CapabilitySnapshot = createCapabilitySnapshot(
-  _adapter.capabilities,
-);
+const _snapshot: CapabilitySnapshot = createCapabilitySnapshot(_adapter.capabilities);
 
 /**
  * Return the capability snapshot for the active `react-flow` editor bundle.

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LiveValidator } from "../../src/validation/live-validator.js";
-import type { ValidationResultCallback } from "../../src/validation/live-validator.js";
 import type { WorkflowSource } from "../../src/source/types.js";
+import type { ValidationResultCallback } from "../../src/validation/live-validator.js";
+import { LiveValidator } from "../../src/validation/live-validator.js";
 
 const VALID_WORKFLOW_JSON: WorkflowSource = {
   format: "json",

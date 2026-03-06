@@ -96,12 +96,7 @@ export function validateWorkflow(
   if (!parseResult.ok) {
     // Map each ParseDiagnostic to a ValidationDiagnostic.
     return parseResult.diagnostics.map((pd) =>
-      createDiagnostic(
-        "schema.validation",
-        "error",
-        pd.message,
-        pd.path ?? "/",
-      ),
+      createDiagnostic("schema.validation", "error", pd.message, pd.path ?? "/"),
     );
   }
 

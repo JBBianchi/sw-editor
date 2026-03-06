@@ -68,15 +68,13 @@ export interface InsertTaskResult {
 export function insertTask(
   graph: WorkflowGraph,
   counter: RevisionCounter,
-  options: InsertTaskOptions
+  options: InsertTaskOptions,
 ): InsertTaskResult {
   const { edgeId, taskReference } = options;
 
   const targetEdge = graph.edges.find((e) => e.id === edgeId);
   if (!targetEdge) {
-    throw new Error(
-      `insertTask: edge "${edgeId}" not found in graph. Cannot insert task.`
-    );
+    throw new Error(`insertTask: edge "${edgeId}" not found in graph. Cannot insert task.`);
   }
 
   const nodeId = generateNodeId();
@@ -101,11 +99,7 @@ export function insertTask(
 
   const updatedGraph: WorkflowGraph = {
     nodes: [...graph.nodes, newNode],
-    edges: [
-      ...graph.edges.filter((e) => e.id !== edgeId),
-      edgeToSource,
-      edgeToTarget,
-    ],
+    edges: [...graph.edges.filter((e) => e.id !== edgeId), edgeToSource, edgeToTarget],
   };
 
   const revision = counter.increment();

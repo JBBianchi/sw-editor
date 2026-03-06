@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
+import type { DiagnosticsCollection, ValidationDiagnostic } from "../src/diagnostics/index.js";
 import {
-  SEVERITY_ORDER,
   compareSeverity,
   createDiagnostic,
   filterBySeverity,
   hasErrors,
   maxSeverity,
+  SEVERITY_ORDER,
   serializeDiagnostics,
   severityRank,
 } from "../src/diagnostics/index.js";
-import type { DiagnosticsCollection, ValidationDiagnostic } from "../src/diagnostics/index.js";
 
 describe("ValidationDiagnostic — type construction", () => {
   it("creates a valid diagnostic via createDiagnostic", () => {

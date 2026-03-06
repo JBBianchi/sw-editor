@@ -8,12 +8,8 @@
  * @module api/load
  */
 
-import {
-  RevisionCounter,
-  loadWorkflow,
-  projectWorkflowToGraph,
-} from "@sw-editor/editor-core";
 import type { WorkflowGraph } from "@sw-editor/editor-core";
+import { loadWorkflow, projectWorkflowToGraph, type RevisionCounter } from "@sw-editor/editor-core";
 import type { LoadWorkflowSourceInput } from "@sw-editor/editor-host-client";
 import { setCurrentSource } from "@sw-editor/editor-host-client";
 
@@ -107,13 +103,8 @@ export class LoadAPI {
     const result = loadWorkflow(input.source, this.counter);
 
     if (!result.ok) {
-      const message = result.diagnostics
-        .map((d) => d.message)
-        .join("; ");
-      this.bridge.emitError(
-        "LOAD_FAILED",
-        `Failed to load workflow: ${message}`,
-      );
+      const message = result.diagnostics.map((d) => d.message).join("; ");
+      this.bridge.emitError("LOAD_FAILED", `Failed to load workflow: ${message}`);
       return;
     }
 

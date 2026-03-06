@@ -1,7 +1,7 @@
-import type { WorkflowSource } from "../source/types.js";
-import { parseWorkflowSource } from "../source/parser.js";
-import type { DiagnosticsCollection, ValidationDiagnostic } from "../diagnostics/types.js";
 import { createDiagnostic } from "../diagnostics/helpers.js";
+import type { DiagnosticsCollection, ValidationDiagnostic } from "../diagnostics/types.js";
+import { parseWorkflowSource } from "../source/parser.js";
+import type { WorkflowSource } from "../source/types.js";
 
 /**
  * Callback invoked when a debounced validation run completes.
@@ -30,12 +30,7 @@ export interface LiveValidatorOptions {
  * {@link ValidationDiagnostic} with a fixed rule ID.
  */
 function toValidationDiagnostic(message: string, path?: string): ValidationDiagnostic {
-  return createDiagnostic(
-    "schema-validation",
-    "error",
-    message,
-    path ?? "/",
-  );
+  return createDiagnostic("schema-validation", "error", message, path ?? "/");
 }
 
 /**

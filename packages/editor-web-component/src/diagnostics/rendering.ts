@@ -1,6 +1,9 @@
-import type { DiagnosticsCollection, ValidationDiagnostic } from "@sw-editor/editor-core";
-import type { DiagnosticSeverity } from "@sw-editor/editor-core";
-import type { WorkflowGraph } from "@sw-editor/editor-core";
+import type {
+  DiagnosticSeverity,
+  DiagnosticsCollection,
+  ValidationDiagnostic,
+  WorkflowGraph,
+} from "@sw-editor/editor-core";
 
 // ---------------------------------------------------------------------------
 // CSS class constants
@@ -194,6 +197,7 @@ export class DiagnosticsRenderer {
       const el = node ? this.findNodeElement(node.id) : null;
 
       if (el) {
+        // biome-ignore lint/style/noNonNullAssertion: el is non-null only when node is non-null (see ternary guard above)
         this.attachNodeIndicator(el, node!.id, diagnostic);
       } else {
         unmapped.push(diagnostic);

@@ -32,10 +32,7 @@ export function severityRank(severity: DiagnosticSeverity): number {
  * @returns A positive number if `a` is more severe than `b`, negative if
  *          less severe, or `0` if equal.
  */
-export function compareSeverity(
-  a: DiagnosticSeverity,
-  b: DiagnosticSeverity,
-): number {
+export function compareSeverity(a: DiagnosticSeverity, b: DiagnosticSeverity): number {
   return SEVERITY_ORDER[a] - SEVERITY_ORDER[b];
 }
 
@@ -46,9 +43,6 @@ export function compareSeverity(
  * @param b - Second severity level.
  * @returns The severity level with the higher rank.
  */
-export function maxSeverity(
-  a: DiagnosticSeverity,
-  b: DiagnosticSeverity,
-): DiagnosticSeverity {
+export function maxSeverity(a: DiagnosticSeverity, b: DiagnosticSeverity): DiagnosticSeverity {
   return SEVERITY_ORDER[a] >= SEVERITY_ORDER[b] ? a : b;
 }

@@ -38,10 +38,7 @@ export interface EdgePanelContext {
  * - `"node"`: a graph node is selected; shows node-specific properties.
  * - `"edge"`: a graph edge is selected; shows edge-specific properties.
  */
-export type PanelContext =
-  | WorkflowPanelContext
-  | NodePanelContext
-  | EdgePanelContext;
+export type PanelContext = WorkflowPanelContext | NodePanelContext | EdgePanelContext;
 
 /**
  * Callback invoked whenever the active panel context changes.
@@ -217,9 +214,7 @@ export class PanelController {
    * context, skipping no-op transitions, and notifying subscribers.
    */
   private readonly handleSelectionChanged = (event: Event): void => {
-    const { selection } = (
-      event as CustomEvent<EditorSelectionChangedPayload>
-    ).detail;
+    const { selection } = (event as CustomEvent<EditorSelectionChangedPayload>).detail;
     const next = this.resolveContext(selection);
 
     // Avoid unnecessary re-renders when context has not structurally changed.

@@ -27,9 +27,9 @@
  * @module
  */
 
-import { beforeAll, describe, expect, it } from "vitest";
-import { LiveValidator } from "@sw-editor/editor-core";
 import type { DiagnosticsCollection, WorkflowSource } from "@sw-editor/editor-core";
+import { LiveValidator } from "@sw-editor/editor-core";
+import { beforeAll, describe, expect, it } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Workflow fixture factory

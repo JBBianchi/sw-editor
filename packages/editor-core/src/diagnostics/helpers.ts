@@ -1,5 +1,5 @@
-import type { DiagnosticSeverity, DiagnosticsCollection, ValidationDiagnostic } from "./types.js";
 import { compareSeverity } from "./severity.js";
+import type { DiagnosticSeverity, DiagnosticsCollection, ValidationDiagnostic } from "./types.js";
 
 /**
  * Filters a {@link DiagnosticsCollection} to only include diagnostics whose
@@ -13,9 +13,7 @@ export function filterBySeverity(
   diagnostics: DiagnosticsCollection,
   minSeverity: DiagnosticSeverity,
 ): DiagnosticsCollection {
-  return diagnostics.filter(
-    (d) => compareSeverity(d.severity, minSeverity) >= 0,
-  );
+  return diagnostics.filter((d) => compareSeverity(d.severity, minSeverity) >= 0);
 }
 
 /**

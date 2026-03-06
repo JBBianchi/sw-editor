@@ -21,7 +21,7 @@
  * @module
  */
 
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
 // Selectors
@@ -49,7 +49,7 @@ const EXPORT_BUTTON_SELECTOR = 'button[aria-label="Export workflow"]';
 const PROPERTY_PANEL_SELECTOR = '[aria-label="Properties panel"]';
 
 /** ARIA live region used for screen-reader announcements. */
-const LIVE_REGION_SELECTOR = '[aria-live]';
+const LIVE_REGION_SELECTOR = "[aria-live]";
 
 /** New workflow creation button. */
 const NEW_WORKFLOW_BUTTON_SELECTOR = 'button[aria-label="Create new workflow"]';
@@ -73,9 +73,7 @@ async function openEditor(page: import("@playwright/test").Page): Promise<void> 
 // ---------------------------------------------------------------------------
 
 test.describe("Keyboard operability — create new workflow", () => {
-  test("new-workflow button is reachable via Tab and activatable via Enter", async ({
-    page,
-  }) => {
+  test("new-workflow button is reachable via Tab and activatable via Enter", async ({ page }) => {
     await openEditor(page);
 
     // Tab into the editor and locate the new-workflow button via keyboard.
@@ -89,12 +87,8 @@ test.describe("Keyboard operability — create new workflow", () => {
     await newWorkflowBtn.press("Enter");
 
     // After creation the graph should contain start and end nodes.
-    await expect(
-      page.locator('[data-node-type="start"]'),
-    ).toBeVisible();
-    await expect(
-      page.locator('[data-node-type="end"]'),
-    ).toBeVisible();
+    await expect(page.locator('[data-node-type="start"]')).toBeVisible();
+    await expect(page.locator('[data-node-type="end"]')).toBeVisible();
   });
 
   test("new-workflow button is activatable via Space", async ({ page }) => {
@@ -107,9 +101,7 @@ test.describe("Keyboard operability — create new workflow", () => {
     await expect(page.locator('[data-node-type="start"]')).toBeVisible();
   });
 
-  test("new-workflow button has a non-empty accessible name", async ({
-    page,
-  }) => {
+  test("new-workflow button has a non-empty accessible name", async ({ page }) => {
     await openEditor(page);
 
     const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
@@ -130,24 +122,18 @@ test.describe("Keyboard operability — task insertion", () => {
     await newWorkflowBtn.press("Enter");
   });
 
-  test("insertion affordance button carries correct aria-label", async ({
-    page,
-  }) => {
+  test("insertion affordance button carries correct aria-label", async ({ page }) => {
     const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
     await expect(affordance).toHaveAttribute("aria-label", "Insert task");
   });
 
-  test("insertion affordance is reachable via Tab navigation", async ({
-    page,
-  }) => {
+  test("insertion affordance is reachable via Tab navigation", async ({ page }) => {
     const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
     await affordance.focus();
     await expect(affordance).toBeFocused();
   });
 
-  test("pressing Enter on affordance opens the task type menu", async ({
-    page,
-  }) => {
+  test("pressing Enter on affordance opens the task type menu", async ({ page }) => {
     const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
     await affordance.focus();
     await affordance.press("Enter");
@@ -156,9 +142,7 @@ test.describe("Keyboard operability — task insertion", () => {
     await expect(menu).toBeVisible();
   });
 
-  test("pressing Space on affordance opens the task type menu", async ({
-    page,
-  }) => {
+  test("pressing Space on affordance opens the task type menu", async ({ page }) => {
     const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
     await affordance.focus();
     await affordance.press(" ");
@@ -166,9 +150,7 @@ test.describe("Keyboard operability — task insertion", () => {
     await expect(page.locator(TASK_MENU_SELECTOR)).toBeVisible();
   });
 
-  test("task menu receives initial focus on the first menu item", async ({
-    page,
-  }) => {
+  test("task menu receives initial focus on the first menu item", async ({ page }) => {
     const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
     await affordance.press("Enter");
 
@@ -176,9 +158,7 @@ test.describe("Keyboard operability — task insertion", () => {
     await expect(firstItem).toBeFocused();
   });
 
-  test("task menu supports ArrowDown navigation between items", async ({
-    page,
-  }) => {
+  test("task menu supports ArrowDown navigation between items", async ({ page }) => {
     const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
     await affordance.press("Enter");
 
@@ -191,9 +171,7 @@ test.describe("Keyboard operability — task insertion", () => {
     await expect(secondItem).toBeFocused();
   });
 
-  test("task menu supports ArrowUp navigation between items", async ({
-    page,
-  }) => {
+  test("task menu supports ArrowUp navigation between items", async ({ page }) => {
     const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
     await affordance.press("Enter");
 
@@ -205,9 +183,7 @@ test.describe("Keyboard operability — task insertion", () => {
     await expect(firstItem).toBeFocused();
   });
 
-  test("pressing Escape closes the task menu and returns focus to affordance", async ({
-    page,
-  }) => {
+  test("pressing Escape closes the task menu and returns focus to affordance", async ({ page }) => {
     const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
     await affordance.press("Enter");
 
@@ -220,9 +196,7 @@ test.describe("Keyboard operability — task insertion", () => {
     await expect(affordance).toBeFocused();
   });
 
-  test("selecting a task type via Enter inserts the task and moves focus", async ({
-    page,
-  }) => {
+  test("selecting a task type via Enter inserts the task and moves focus", async ({ page }) => {
     const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
     await affordance.press("Enter");
 
@@ -247,18 +221,13 @@ test.describe("Keyboard operability — task insertion", () => {
     await expect(items.first()).toHaveAttribute("role", "menuitem");
   });
 
-  test("task type menu has role=menu with a descriptive aria-label", async ({
-    page,
-  }) => {
+  test("task type menu has role=menu with a descriptive aria-label", async ({ page }) => {
     const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
     await affordance.press("Enter");
 
     const menu = page.locator(TASK_MENU_SELECTOR);
     await expect(menu).toHaveAttribute("role", "menu");
-    await expect(menu).toHaveAttribute(
-      "aria-label",
-      "Select task type to insert",
-    );
+    await expect(menu).toHaveAttribute("aria-label", "Select task type to insert");
   });
 });
 
@@ -280,9 +249,7 @@ test.describe("Keyboard operability — node navigation", () => {
     await expect(graphNode).toBeFocused();
   });
 
-  test("graph nodes are focusable and have a non-empty accessible name", async ({
-    page,
-  }) => {
+  test("graph nodes are focusable and have a non-empty accessible name", async ({ page }) => {
     const startNode = page.locator('[data-node-type="start"]');
     await startNode.focus();
     // The node must have either an aria-label or an accessible text name.
@@ -294,9 +261,7 @@ test.describe("Keyboard operability — node navigation", () => {
     ).toBeGreaterThan(0);
   });
 
-  test("selecting a node via keyboard updates the properties panel", async ({
-    page,
-  }) => {
+  test("selecting a node via keyboard updates the properties panel", async ({ page }) => {
     const startNode = page.locator('[data-node-type="start"]');
     await startNode.focus();
     await startNode.press("Enter");
@@ -318,17 +283,13 @@ test.describe("Keyboard operability — property panel", () => {
     await newWorkflowBtn.press("Enter");
   });
 
-  test("property panel is visible and has an accessible region landmark", async ({
-    page,
-  }) => {
+  test("property panel is visible and has an accessible region landmark", async ({ page }) => {
     const panel = page.locator(PROPERTY_PANEL_SELECTOR);
     await expect(panel).toBeVisible();
     await expect(panel).toHaveAttribute("aria-label", "Properties panel");
   });
 
-  test("panel inputs are reachable via Tab navigation inside the panel", async ({
-    page,
-  }) => {
+  test("panel inputs are reachable via Tab navigation inside the panel", async ({ page }) => {
     const panel = page.locator(PROPERTY_PANEL_SELECTOR);
     await expect(panel).toBeVisible();
 
@@ -366,18 +327,14 @@ test.describe("Keyboard operability — export workflow", () => {
     await newWorkflowBtn.press("Enter");
   });
 
-  test("export button is reachable via Tab and has correct aria-label", async ({
-    page,
-  }) => {
+  test("export button is reachable via Tab and has correct aria-label", async ({ page }) => {
     const exportBtn = page.locator(EXPORT_BUTTON_SELECTOR);
     await exportBtn.focus();
     await expect(exportBtn).toBeFocused();
     await expect(exportBtn).toHaveAttribute("aria-label", "Export workflow");
   });
 
-  test("activating export via Enter opens the format selection UI", async ({
-    page,
-  }) => {
+  test("activating export via Enter opens the format selection UI", async ({ page }) => {
     const exportBtn = page.locator(EXPORT_BUTTON_SELECTOR);
     await exportBtn.focus();
     await exportBtn.press("Enter");
@@ -387,9 +344,7 @@ test.describe("Keyboard operability — export workflow", () => {
     await expect(formatMenu).toBeVisible();
   });
 
-  test("export format options are navigable and selectable via keyboard", async ({
-    page,
-  }) => {
+  test("export format options are navigable and selectable via keyboard", async ({ page }) => {
     const exportBtn = page.locator(EXPORT_BUTTON_SELECTOR);
     await exportBtn.press("Enter");
 
@@ -425,15 +380,12 @@ test.describe("Screen-reader — ARIA live region announcements", () => {
   test("live region uses aria-live=polite or assertive", async ({ page }) => {
     const liveRegion = page.locator(LIVE_REGION_SELECTOR).first();
     const ariaLive = await liveRegion.getAttribute("aria-live");
-    expect(
-      ["polite", "assertive"],
-      "aria-live must be 'polite' or 'assertive'",
-    ).toContain(ariaLive);
+    expect(["polite", "assertive"], "aria-live must be 'polite' or 'assertive'").toContain(
+      ariaLive,
+    );
   });
 
-  test("selecting a node announces the panel context change", async ({
-    page,
-  }) => {
+  test("selecting a node announces the panel context change", async ({ page }) => {
     const liveRegion = page.locator(LIVE_REGION_SELECTOR).first();
 
     // Capture initial announcement text.
@@ -444,15 +396,10 @@ test.describe("Screen-reader — ARIA live region announcements", () => {
     // The live region text should update to describe the node panel context.
     await expect(liveRegion).not.toHaveText("");
     const announcementText = await liveRegion.textContent();
-    expect(
-      announcementText ?? "",
-      "Live region must announce node selection",
-    ).toContain("Node");
+    expect(announcementText ?? "", "Live region must announce node selection").toContain("Node");
   });
 
-  test("deselecting announces return to workflow panel context", async ({
-    page,
-  }) => {
+  test("deselecting announces return to workflow panel context", async ({ page }) => {
     const liveRegion = page.locator(LIVE_REGION_SELECTOR).first();
 
     // Select a node then deselect.
@@ -469,12 +416,14 @@ test.describe("Screen-reader — ARIA live region announcements", () => {
     ).toMatch(/workflow/i);
   });
 
-  test("diagnostics live region announces validation errors", async ({
-    page,
-  }) => {
+  test("diagnostics live region announces validation errors", async ({ page }) => {
     // Locate the diagnostics-specific live region (may be a separate element
     // or the same as the general one, depending on implementation).
-    const diagnosticsRegion = page.locator('[aria-label*="diagnostics" i], [aria-label*="validation" i], [data-testid="diagnostics-live-region"]').first();
+    const diagnosticsRegion = page
+      .locator(
+        '[aria-label*="diagnostics" i], [aria-label*="validation" i], [data-testid="diagnostics-live-region"]',
+      )
+      .first();
     await expect(diagnosticsRegion).toBeAttached();
   });
 });
@@ -488,9 +437,7 @@ test.describe("Focus visibility", () => {
     await openEditor(page);
   });
 
-  test("focused insertion affordance has a visible focus indicator", async ({
-    page,
-  }) => {
+  test("focused insertion affordance has a visible focus indicator", async ({ page }) => {
     const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
     await newWorkflowBtn.press("Enter");
 
@@ -525,9 +472,7 @@ test.describe("ARIA structural semantics", () => {
     await openEditor(page);
   });
 
-  test("editor root element exposes a complementary or main landmark", async ({
-    page,
-  }) => {
+  test("editor root element exposes a complementary or main landmark", async ({ page }) => {
     // The editor should reside within a main or complementary landmark so
     // screen-reader users can navigate to it directly.
     const landmark = page.locator(
@@ -536,9 +481,7 @@ test.describe("ARIA structural semantics", () => {
     await expect(landmark).toBeAttached();
   });
 
-  test("property panel exposes a region landmark with an accessible label", async ({
-    page,
-  }) => {
+  test("property panel exposes a region landmark with an accessible label", async ({ page }) => {
     const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
     await newWorkflowBtn.press("Enter");
 
@@ -547,9 +490,7 @@ test.describe("ARIA structural semantics", () => {
 
     const role = await panel.getAttribute("role");
     const ariaLabel = await panel.getAttribute("aria-label");
-    const isRegion =
-      role === "region" ||
-      panel.locator("..").first() !== null; // region is default for labeled sections
+    const isRegion = role === "region" || panel.locator("..").first() !== null; // region is default for labeled sections
     expect(ariaLabel ?? "", "Panel must have a non-empty aria-label").not.toBe("");
     expect(isRegion).toBe(true);
   });
@@ -558,7 +499,9 @@ test.describe("ARIA structural semantics", () => {
     const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
     await newWorkflowBtn.press("Enter");
 
-    const canvas = page.locator('[data-testid="editor-canvas"], [aria-label*="workflow graph" i]').first();
+    const canvas = page
+      .locator('[data-testid="editor-canvas"], [aria-label*="workflow graph" i]')
+      .first();
     await expect(canvas).toBeAttached();
     const ariaLabel = await canvas.getAttribute("aria-label");
     expect(ariaLabel ?? "", "Graph canvas must have a non-empty aria-label").not.toBe("");
@@ -585,10 +528,7 @@ test.describe("ARIA structural semantics", () => {
         (ariaLabelledBy ?? "").trim().length > 0 ||
         textContent.trim().length > 0;
 
-      expect(
-        hasAccessibleName,
-        `Button at index ${i} has no accessible name`,
-      ).toBe(true);
+      expect(hasAccessibleName, `Button at index ${i} has no accessible name`).toBe(true);
     }
   });
 });

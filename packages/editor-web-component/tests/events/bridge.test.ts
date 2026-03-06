@@ -1,18 +1,18 @@
-import { describe, expect, it } from "vitest";
-import { EditorEventName } from "@sw-editor/editor-host-client";
-import { EventBridge } from "../../src/events/index.js";
-import type {
-  EditorDiagnosticsChangedEvent,
-  EditorErrorEvent,
-  EditorSelectionChangedEvent,
-  WorkflowChangedEvent,
-} from "../../src/events/index.js";
 import type {
   EditorDiagnosticsChangedPayload,
   EditorErrorPayload,
   EditorSelectionChangedPayload,
   WorkflowChangedPayload,
 } from "@sw-editor/editor-host-client";
+import { EditorEventName } from "@sw-editor/editor-host-client";
+import { describe, expect, it } from "vitest";
+import type {
+  EditorDiagnosticsChangedEvent,
+  EditorErrorEvent,
+  EditorSelectionChangedEvent,
+  WorkflowChangedEvent,
+} from "../../src/events/index.js";
+import { EventBridge } from "../../src/events/index.js";
 
 /** Captures the next event of `name` on `target` and returns its detail. */
 function captureEvent<T>(target: EventTarget, name: string): Promise<T> {
@@ -157,7 +157,12 @@ describe("EventBridge", () => {
       );
 
       const diagnostics = [
-        { ruleId: "required-field", severity: "error" as const, message: "Missing name", location: "/name" },
+        {
+          ruleId: "required-field",
+          severity: "error" as const,
+          message: "Missing name",
+          location: "/name",
+        },
       ];
       bridge.emitDiagnosticsChanged(diagnostics);
 
@@ -201,10 +206,7 @@ describe("EventBridge", () => {
     it("dispatches editorError with code and message", async () => {
       const target = new EventTarget();
       const bridge = new EventBridge(target, VERSION);
-      const detailPromise = captureEvent<EditorErrorPayload>(
-        target,
-        EditorEventName.editorError,
-      );
+      const detailPromise = captureEvent<EditorErrorPayload>(target, EditorEventName.editorError);
 
       bridge.emitError("RENDER_FAILED", "Renderer failed to initialize");
 
@@ -261,10 +263,7 @@ describe("EventBridge", () => {
     it("starts revision at 1 for a fresh instance", async () => {
       const target = new EventTarget();
       const bridge = new EventBridge(target, VERSION);
-      const detailPromise = captureEvent<EditorErrorPayload>(
-        target,
-        EditorEventName.editorError,
-      );
+      const detailPromise = captureEvent<EditorErrorPayload>(target, EditorEventName.editorError);
 
       bridge.emitError("E", "m");
 

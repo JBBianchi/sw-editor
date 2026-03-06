@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EditorEventName } from "@sw-editor/editor-host-client";
-import type { EditorDiagnosticsChangedPayload } from "@sw-editor/editor-host-client";
 import type { DiagnosticsCollection } from "@sw-editor/editor-core";
+import type { EditorDiagnosticsChangedPayload } from "@sw-editor/editor-host-client";
+import { EditorEventName } from "@sw-editor/editor-host-client";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBridge } from "../../src/events/bridge.js";
 import { DiagnosticsEmitter } from "../../src/events/diagnostics.js";
 
@@ -205,8 +205,8 @@ describe("DiagnosticsEmitter", () => {
 
       emitter.handle(DIAGNOSTIC_A); // emit 1
       emitter.handle(DIAGNOSTIC_A); // skip (duplicate)
-      emitter.handle([]);           // emit 2
-      emitter.handle([]);           // skip (duplicate)
+      emitter.handle([]); // emit 2
+      emitter.handle([]); // skip (duplicate)
       emitter.handle(DIAGNOSTIC_B); // emit 3
 
       expect(received).toHaveLength(3);

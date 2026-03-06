@@ -3,11 +3,12 @@ import type {
   EditorDiagnosticsChangedPayload,
   EditorErrorPayload,
   EditorEventPayloadMap,
+  EditorSelection,
   EditorSelectionChangedPayload,
   WorkflowChangedPayload,
+  WorkflowSource,
 } from "@sw-editor/editor-host-client";
 import { EditorEventName } from "@sw-editor/editor-host-client";
-import type { EditorSelection, WorkflowSource } from "@sw-editor/editor-host-client";
 
 /**
  * Bridges internal editor-core state changes to custom DOM events on a

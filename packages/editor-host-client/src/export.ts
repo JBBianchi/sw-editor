@@ -12,7 +12,10 @@
 
 import { parseWorkflowSource, serializeWorkflow } from "@sw-editor/editor-core";
 
-import type { ExportWorkflowSourceOptions, ExportWorkflowSourceResult } from "./contracts/methods.js";
+import type {
+  ExportWorkflowSourceOptions,
+  ExportWorkflowSourceResult,
+} from "./contracts/methods.js";
 import type { WorkflowFormat, WorkflowSource } from "./contracts/types.js";
 
 /** Default output format when no source has been loaded (new workflow). */

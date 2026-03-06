@@ -1,16 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { insertTask } from "../../src/commands/insert-task.js";
-import type {
-  InsertTaskOptions,
-  InsertTaskResult,
-} from "../../src/commands/insert-task.js";
+import type { WorkflowGraph } from "../../src/graph/index.js";
 import {
+  bootstrapWorkflowGraph,
   END_NODE_ID,
   INITIAL_EDGE_ID,
   START_NODE_ID,
-  bootstrapWorkflowGraph,
 } from "../../src/graph/index.js";
-import type { WorkflowGraph } from "../../src/graph/index.js";
 import { RevisionCounter } from "../../src/state/revision.js";
 
 // ---------------------------------------------------------------------------
@@ -20,23 +16,17 @@ import { RevisionCounter } from "../../src/state/revision.js";
 /** Returns true if every edge in the graph references existing node IDs. */
 function isGraphConnected(graph: WorkflowGraph): boolean {
   const nodeIds = new Set(graph.nodes.map((n) => n.id));
-  return graph.edges.every(
-    (e) => nodeIds.has(e.source) && nodeIds.has(e.target)
-  );
+  return graph.edges.every((e) => nodeIds.has(e.source) && nodeIds.has(e.target));
 }
 
 /** Returns all direct successors of a node by ID. */
 function successors(graph: WorkflowGraph, nodeId: string): string[] {
-  return graph.edges
-    .filter((e) => e.source === nodeId)
-    .map((e) => e.target);
+  return graph.edges.filter((e) => e.source === nodeId).map((e) => e.target);
 }
 
 /** Returns all direct predecessors of a node by ID. */
 function predecessors(graph: WorkflowGraph, nodeId: string): string[] {
-  return graph.edges
-    .filter((e) => e.target === nodeId)
-    .map((e) => e.source);
+  return graph.edges.filter((e) => e.target === nodeId).map((e) => e.source);
 }
 
 // ---------------------------------------------------------------------------
@@ -78,9 +68,7 @@ describe("insertTask — single insertion between start and end", () => {
     const counter = new RevisionCounter();
     const result = insertTask(graph, counter, { edgeId: INITIAL_EDGE_ID });
 
-    const originalEdge = result.graph.edges.find(
-      (e) => e.id === INITIAL_EDGE_ID
-    );
+    const originalEdge = result.graph.edges.find((e) => e.id === INITIAL_EDGE_ID);
     expect(originalEdge).toBeUndefined();
   });
 
@@ -152,11 +140,12 @@ describe("insertTask — multiple insertions maintain connectivity", () => {
 
     // Find the edge connecting start → first task node, then split it.
     const edgeStartToFirst = graph.edges.find(
-      (e) => e.source === START_NODE_ID && e.target === first.nodeId
+      (e) => e.source === START_NODE_ID && e.target === first.nodeId,
     );
     expect(edgeStartToFirst).toBeDefined();
 
     const second = insertTask(graph, counter, {
+      // biome-ignore lint/style/noNonNullAssertion: toBeDefined() assertion above guarantees non-null
       edgeId: edgeStartToFirst!.id,
     });
     graph = second.graph;
@@ -181,7 +170,7 @@ describe("insertTask — multiple insertions maintain connectivity", () => {
       // For the next iteration, split the edge from the newly inserted node
       // to the end node so we always have a valid edge to split.
       const nextEdge = graph.edges.find(
-        (e) => e.source === result.nodeId && e.target === END_NODE_ID
+        (e) => e.source === result.nodeId && e.target === END_NODE_ID,
       );
       if (nextEdge) {
         edgeToSplit = nextEdge.id;
@@ -197,9 +186,8 @@ describe("insertTask — multiple insertions maintain connectivity", () => {
     graph = first.graph;
     expect(first.revision).toBe(1);
 
-    const edgeStartToFirst = graph.edges.find(
-      (e) => e.source === START_NODE_ID
-    )!;
+    // biome-ignore lint/style/noNonNullAssertion: bootstrapped graph always has a start edge after insertTask
+    const edgeStartToFirst = graph.edges.find((e) => e.source === START_NODE_ID)!;
     const second = insertTask(graph, counter, { edgeId: edgeStartToFirst.id });
     expect(second.revision).toBe(2);
     expect(counter.currentRevision).toBe(2);
@@ -218,7 +206,7 @@ describe("insertTask — multiple insertions maintain connectivity", () => {
       insertedIds.push(result.nodeId);
 
       const nextEdge = graph.edges.find(
-        (e) => e.source === result.nodeId && e.target === END_NODE_ID
+        (e) => e.source === result.nodeId && e.target === END_NODE_ID,
       );
       if (nextEdge) {
         edgeToSplit = nextEdge.id;
@@ -241,7 +229,7 @@ describe("insertTask — multiple insertions maintain connectivity", () => {
       expect(result.nodeId).not.toBe(END_NODE_ID);
 
       const nextEdge = graph.edges.find(
-        (e) => e.source === result.nodeId && e.target === END_NODE_ID
+        (e) => e.source === result.nodeId && e.target === END_NODE_ID,
       );
       if (nextEdge) {
         edgeToSplit = nextEdge.id;
@@ -259,9 +247,9 @@ describe("insertTask — edge cases", () => {
     const graph = bootstrapWorkflowGraph();
     const counter = new RevisionCounter();
 
-    expect(() =>
-      insertTask(graph, counter, { edgeId: "nonexistent-edge" })
-    ).toThrow(/nonexistent-edge/);
+    expect(() => insertTask(graph, counter, { edgeId: "nonexistent-edge" })).toThrow(
+      /nonexistent-edge/,
+    );
   });
 
   it("does not increment revision when insertion fails", () => {
@@ -299,8 +287,9 @@ describe("insertTask — edge cases", () => {
     graph = first.graph;
 
     // Find task1 → end edge and split it → start → task1 → task2 → end
+    // biome-ignore lint/style/noNonNullAssertion: insertTask always creates a task-to-end edge
     const task1ToEnd = graph.edges.find(
-      (e) => e.source === first.nodeId && e.target === END_NODE_ID
+      (e) => e.source === first.nodeId && e.target === END_NODE_ID,
     )!;
 
     const second = insertTask(graph, counter, { edgeId: task1ToEnd.id });
