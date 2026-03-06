@@ -21,7 +21,7 @@
       <div aria-live="polite" aria-atomic="true" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"></div>
     </main>
 
-    <!-- Source editor: paste YAML or JSON to load a workflow -->
+    <!-- Source editor: paste YAML or JSON for live diagnostics — used by Scenario 4 e2e tests -->
     <section style="padding:0.5rem;display:flex;flex-direction:column;gap:0.25rem;">
       <label for="source-input" style="font-size:0.75rem;font-weight:600;">Workflow source (YAML / JSON)</label>
       <textarea
@@ -42,6 +42,22 @@
       ></div>
     </section>
 
+    <!-- Load workflow source panel — used by Scenario 3 e2e tests -->
+    <section aria-label="Load workflow source" style="padding:8px;border-top:1px solid #ccc;">
+      <label for="yaml-source" style="display:block;margin-bottom:4px;font-size:0.875rem;">YAML source</label>
+      <textarea id="yaml-source" aria-label="YAML source" rows="6" style="width:100%;font-family:monospace;font-size:0.75rem;"></textarea>
+      <button id="load-workflow-btn" type="button" aria-label="Load workflow" style="margin-top:4px;">Load</button>
+    </section>
+
     <script type="module" src="./main.ts"></script>
+    <script type="module">
+      document.getElementById("load-workflow-btn").addEventListener("click", () => {
+        const yaml = document.getElementById("yaml-source").value;
+        const editor = document.querySelector("sw-editor");
+        if (editor && typeof editor.loadSource === "function") {
+          editor.loadSource(yaml);
+        }
+      });
+    </script>
   </body>
 </html>
