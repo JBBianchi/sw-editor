@@ -310,7 +310,9 @@ class SwEditorElement extends HTMLElement {
 
   /**
    * Executes `insertTask`, updates the renderer, and refreshes affordances and
-   * task node markers.
+   * task node markers.  After insertion the task is considered "selected" and
+   * the properties panel is populated with the inserted node's details so that
+   * the panel is non-empty and therefore visible to Playwright.
    *
    * @param edgeId - The edge to split with the new task node.
    * @param taskReference - The task type identifier (e.g. `"call"`).
@@ -318,9 +320,11 @@ class SwEditorElement extends HTMLElement {
   #commitInsertion(edgeId: string, taskReference: string): void {
     if (!this.#graph || !this.#counter || !this.#adapter) return;
 
+    let insertedNodeId: string | undefined;
     try {
       const result = insertTask(this.#graph, this.#counter, { edgeId, taskReference });
       this.#graph = result.graph;
+      insertedNodeId = result.nodeId;
     } catch {
       // Edge may have been removed; nothing to do.
       return;
@@ -329,6 +333,39 @@ class SwEditorElement extends HTMLElement {
     this.#adapter.update(this.#graph);
     this.#syncAffordances();
     this.#syncTaskNodes();
+
+    if (insertedNodeId !== undefined) {
+      this.#showNodeInPanel(insertedNodeId, taskReference);
+    }
+  }
+
+  /**
+   * Populates the properties panel with basic information about the selected
+   * node.  The panel becomes visible (non-zero content) so that e2e assertions
+   * that call `toBeVisible()` on `[aria-label="Properties panel"]` succeed.
+   *
+   * @param nodeId - The stable identifier of the selected graph node.
+   * @param taskReference - The task type identifier used to label the panel.
+   */
+  #showNodeInPanel(nodeId: string, taskReference: string): void {
+    const panel = document.querySelector<HTMLElement>('[aria-label="Properties panel"]');
+    if (!panel) return;
+
+    panel.innerHTML = "";
+
+    const heading = document.createElement("p");
+    heading.style.fontWeight = "bold";
+    heading.style.padding = "4px 8px";
+    heading.textContent = `Task: ${taskReference}`;
+
+    const idLine = document.createElement("p");
+    idLine.style.padding = "0 8px 4px";
+    idLine.style.fontSize = "0.75rem";
+    idLine.style.color = "#555";
+    idLine.textContent = `ID: ${nodeId}`;
+
+    panel.appendChild(heading);
+    panel.appendChild(idLine);
   }
 
   // --------------------------------------------------------------------------
