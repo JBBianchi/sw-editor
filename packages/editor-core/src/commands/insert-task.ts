@@ -97,8 +97,13 @@ export function insertTask(
     target: targetEdge.target,
   };
 
+  const sourceIndex = graph.nodes.findIndex((n) => n.id === targetEdge.source);
+  const insertIndex = sourceIndex === -1 ? graph.nodes.length : sourceIndex + 1;
+  const updatedNodes = [...graph.nodes];
+  updatedNodes.splice(insertIndex, 0, newNode);
+
   const updatedGraph: WorkflowGraph = {
-    nodes: [...graph.nodes, newNode],
+    nodes: updatedNodes,
     edges: [...graph.edges.filter((e) => e.id !== edgeId), edgeToSource, edgeToTarget],
   };
 
