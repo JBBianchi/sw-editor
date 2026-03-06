@@ -23,12 +23,33 @@ import type {
 import {
   type Edge,
   type Node,
+  type NodeTypes,
   type OnSelectionChangeParams,
   ReactFlow,
   ReactFlowProvider,
 } from "@xyflow/react";
 import React, { useLayoutEffect, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { EndNode } from "./nodes/EndNode.js";
+import { StartNode } from "./nodes/StartNode.js";
+import { TaskNode } from "./nodes/TaskNode.js";
+
+// ---------------------------------------------------------------------------
+// Node type registry
+// ---------------------------------------------------------------------------
+
+/**
+ * Mapping from workflow node kind strings to their React Flow custom component.
+ *
+ * Passed to the `<ReactFlow>` component so that it renders the correct visual
+ * representation for each node in the graph instead of the built-in default
+ * node shape.
+ */
+const nodeTypes: NodeTypes = {
+  start: StartNode,
+  end: EndNode,
+  task: TaskNode,
+};
 
 // ---------------------------------------------------------------------------
 // Internal types
@@ -189,6 +210,7 @@ function WorkflowFlowApp(props: WorkflowFlowAppProps): React.ReactElement {
     React.createElement(ReactFlow, {
       nodes,
       edges,
+      nodeTypes,
       onSelectionChange: props.onSelectionChange,
       fitView: true,
       proOptions: { hideAttribution: false },
