@@ -1,5 +1,5 @@
 {
-  "name": "@sw-editor/demo",
+  "name": "@sw-editor/example-e2e-harness",
   "version": "0.0.0",
   "private": true,
   "type": "module",
