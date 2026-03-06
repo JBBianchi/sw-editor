@@ -1,0 +1,19 @@
+{
+  "name": "@sw-editor/example-host-events",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Host-events example: subscribe to editor diagnostics and capability events",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@sw-editor/editor-host-client": "workspace:*",
+    "@sw-editor/editor-web-component": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}

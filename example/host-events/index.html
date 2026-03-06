@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>sw-editor — Host Events Example</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        background: #f8f9fa;
+        color: #212529;
+      }
+      h1 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+      p.lead { color: #555; margin-top: 0; }
+      .controls { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+      button {
+        background: #0d6efd;
+        color: #fff;
+        border: none;
+        padding: 0.4rem 0.9rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.875rem;
+      }
+      button:hover { background: #0b5ed7; }
+      button.secondary { background: #6c757d; }
+      button.secondary:hover { background: #5c636a; }
+      button.danger { background: #dc3545; }
+      button.danger:hover { background: #bb2d3b; }
+      .panels {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+      @media (max-width: 600px) { .panels { grid-template-columns: 1fr; } }
+      .panel {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 1rem;
+      }
+      .panel h2 {
+        font-size: 0.95rem;
+        margin: 0 0 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .badge {
+        background: #0d6efd;
+        color: #fff;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        padding: 0.1rem 0.5rem;
+        min-width: 1.4rem;
+        text-align: center;
+      }
+      .event-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: 260px;
+        overflow-y: auto;
+        font-size: 0.8rem;
+      }
+      .event-list li {
+        border-bottom: 1px solid #f0f0f0;
+        padding: 0.35rem 0;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.4rem;
+        align-items: start;
+      }
+      .event-list li:last-child { border-bottom: none; }
+      .event-time { color: #888; white-space: nowrap; }
+      .event-body { word-break: break-word; }
+      .event-body .type {
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 0.1rem;
+      }
+      .type-workflowChanged { color: #198754; }
+      .type-editorDiagnosticsChanged { color: #fd7e14; }
+      .type-editorSelectionChanged { color: #0dcaf0; }
+      .type-editorError { color: #dc3545; }
+      .empty { color: #aaa; font-size: 0.85rem; font-style: italic; }
+      .cap-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+      .cap-table td { padding: 0.25rem 0.35rem; border-bottom: 1px solid #f0f0f0; }
+      .cap-table td:first-child { color: #555; width: 55%; }
+      .cap-table tr:last-child td { border-bottom: none; }
+    </style>
+  </head>
+  <body>
+    <h1>sw-editor — Host Events Integration</h1>
+    <p class="lead">
+      Demonstrates subscribing to editor events and querying renderer
+      capabilities through the host–editor contract API.
+    </p>
+
+    <div class="controls">
+      <button id="btn-simulate-load">Simulate workflow load event</button>
+      <button id="btn-simulate-diag">Simulate diagnostics event</button>
+      <button id="btn-simulate-selection">Simulate selection event</button>
+      <button id="btn-simulate-error" class="secondary">Simulate error event</button>
+      <button id="btn-get-cap">Query capabilities</button>
+      <button id="btn-clear" class="danger">Clear log</button>
+    </div>
+
+    <div class="panels">
+      <div class="panel">
+        <h2>
+          Event log
+          <span class="badge" id="event-count">0</span>
+        </h2>
+        <ul class="event-list" id="event-list">
+          <li><span class="empty">No events yet — click a button above.</span></li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <h2>Renderer capabilities</h2>
+        <p class="empty" id="cap-placeholder">
+          Click "Query capabilities" to populate.
+        </p>
+        <table class="cap-table" id="cap-table" hidden>
+          <tbody id="cap-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!--
+      In a full integration, mount the editor element and listen on it:
+
+        <sw-editor id="editor" style="width:100%;height:400px;"></sw-editor>
+
+        const editor = document.getElementById('editor');
+        editor.addEventListener('editorDiagnosticsChanged', (e) => {
+          console.log('diagnostics:', e.detail.diagnostics);
+        });
+        editor.addEventListener('workflowChanged', (e) => {
+          console.log('source:', e.detail.source);
+        });
+
+        // Query capabilities after mount:
+        const caps = await editor.getCapabilities();
+    -->
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

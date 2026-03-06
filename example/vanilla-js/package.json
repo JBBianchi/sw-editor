@@ -1,0 +1,19 @@
+{
+  "name": "@sw-editor/example-vanilla-js",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Vanilla-JS example: embed sw-editor, load a workflow fixture, and export the result",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@sw-editor/editor-host-client": "workspace:*",
+    "@sw-editor/editor-web-component": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}
