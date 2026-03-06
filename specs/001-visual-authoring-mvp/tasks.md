@@ -74,3 +74,39 @@
 - [ ] T034 [OUT-OF-SCOPE #106] Create demo HTML harness and add `webServer` to `playwright.config.ts` to automate Playwright e2e (GAP-001 / F001 — SC-001, SC-007)
 - [ ] T035 [OUT-OF-SCOPE #107] Add `tests/e2e/quickstart-scenarios.spec.ts` Playwright counterpart for quickstart scenarios (Finding F002)
 - [ ] T036 [OUT-OF-SCOPE #108] Add package-level unit tests for `packages/editor-host-client/` (Finding F003)
+
+## Phase 8: Example Applications (Phase C)
+
+**Goal**: Provide runnable integration examples demonstrating host-client embedding patterns.
+
+- [x] T037 Add `example/vanilla-js/` integration demo: load/export workflow via host-client API (`example/vanilla-js/index.html`, `main.ts`, `vite.config.ts`, `package.json`)
+- [x] T038 Add `example/host-events/` integration demo: event subscription and capability query patterns (`example/host-events/index.html`, `main.ts`, `vite.config.ts`, `package.json`)
+- [x] T039 Add `example/README.md` documenting both example apps and how to run them
+- [x] T040 Add `example/playwright.config.ts` with `webServer` entries for `vanilla-js` (port 5174) and `host-events` (port 5175)
+
+## Phase 9: Example Playwright E2E Coverage (Phase D)
+
+**Goal**: Automate acceptance verification for both example apps using Playwright.
+
+- [x] T041 Add `example/tests/vanilla-js.spec.ts` — Playwright e2e tests covering page load, workflow load, and JSON/YAML export flows (US2 Scenario 2, SC-003)
+- [x] T042 Add `example/tests/host-events.spec.ts` — Playwright e2e tests covering diagnostics events, capability query, and clear-log flows (US3 Scenario 2, SC-002)
+
+## Phase 10: Final Sync (Task #100)
+
+**Goal**: Confirm complete acceptance coverage and update all spec artifacts.
+
+- [x] T043 Update `specs/001-visual-authoring-mvp/tasks.md` with all Phase 8–9 entries and confirm `[x]`/`[ ]` state for all tasks
+- [x] T044 Update `specs/README.md` to reflect example directory and current test coverage status
+- [x] T045 Map every acceptance scenario in `spec.md` to at least one automated test (see coverage table below)
+
+### Acceptance Scenario Coverage
+
+| Scenario | Test File(s) |
+|----------|-------------|
+| US1-S1: new workflow → start/end nodes | `tests/integration/quickstart-scenarios.spec.ts` (Scenario 1); `tests/e2e/accessibility-mvp.spec.ts` (new-workflow keyboard tests) |
+| US1-S2: insertion affordance → task inserted between nodes | `tests/integration/quickstart-scenarios.spec.ts` (Scenario 2); `tests/e2e/accessibility-mvp.spec.ts` (task insertion keyboard tests) |
+| US1-S3: edit task properties → workflow source updated | `tests/integration/quickstart-scenarios.spec.ts` (Scenario 2 — revision tracking); `tests/integration/workflow-roundtrip.spec.ts` |
+| US2-S1: load JSON/YAML → graph and panel reflect structure | `tests/integration/quickstart-scenarios.spec.ts` (Scenario 3); `tests/integration/workflow-roundtrip.spec.ts` |
+| US2-S2: visual edits → export returns updated source | `tests/integration/workflow-roundtrip.spec.ts`; `example/tests/vanilla-js.spec.ts` (export as JSON/YAML) |
+| US3-S1: invalid input → debounce → diagnostics update | `tests/integration/quickstart-scenarios.spec.ts` (Scenario 4); `tests/contract/editor-diagnostics.contract.spec.ts` |
+| US3-S2: explicit validation → full diagnostics emitted | `tests/integration/quickstart-scenarios.spec.ts` (Scenario 4 — full validator); `tests/contract/editor-diagnostics.contract.spec.ts` |
