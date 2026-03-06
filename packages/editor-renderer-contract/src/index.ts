@@ -1,7 +1,9 @@
 export type {
+  FocusTarget,
   RendererAdapter,
   RendererCapabilitySnapshot,
   RendererClearSelection,
+  RendererEdgeAnchor,
   RendererEdgeSelection,
   RendererEventBridge,
   RendererGraphEdge,

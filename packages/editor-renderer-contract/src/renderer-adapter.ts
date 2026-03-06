@@ -146,6 +146,45 @@ export interface RendererCapabilitySnapshot {
 }
 
 // ---------------------------------------------------------------------------
+// Edge anchor / focus target
+// ---------------------------------------------------------------------------
+
+/**
+ * A visual anchor point on a rendered edge, typically used to position an
+ * insertion control at the midpoint of an edge.
+ */
+export interface RendererEdgeAnchor {
+  /** Identity of the edge this anchor belongs to. */
+  edgeId: string;
+  /** Identity of the source node of the edge. */
+  sourceNodeId: string;
+  /** Identity of the target node of the edge. */
+  targetNodeId: string;
+  /** Horizontal coordinate of the anchor point in the renderer viewport (pixels). */
+  x: number;
+  /** Vertical coordinate of the anchor point in the renderer viewport (pixels). */
+  y: number;
+}
+
+/**
+ * Describes how the renderer should bring a node into view after insertion.
+ */
+export interface FocusTarget {
+  /** Identity of the node to focus. */
+  nodeId: string;
+  /**
+   * Optional scroll/zoom behavior hint.
+   *
+   * - `"center"` — scroll and zoom so the node is centered in the viewport.
+   * - `"ensure-visible"` — scroll the minimum amount needed to make the node
+   *   visible without changing zoom.
+   *
+   * When omitted the renderer may choose its own default behavior.
+   */
+  behavior?: "center" | "ensure-visible";
+}
+
+// ---------------------------------------------------------------------------
 // Adapter interface
 // ---------------------------------------------------------------------------
 
@@ -217,4 +256,27 @@ export interface RendererAdapter {
    * `update` or `dispose` again after this point is a programming error.
    */
   dispose(): void;
+
+  /**
+   * Retrieve the visual anchor point for the given edge.
+   *
+   * Returns the midpoint coordinates and connected node IDs for the edge,
+   * or `null` if the edge is not currently rendered or the renderer does
+   * not support edge anchors.
+   *
+   * @param edgeId - The identity of the edge to query.
+   * @returns The edge anchor, or `null` if unavailable.
+   */
+  getEdgeAnchor?(edgeId: string): RendererEdgeAnchor | null;
+
+  /**
+   * Bring a node into view in the renderer viewport.
+   *
+   * Used after inserting a new node to ensure it is visible to the user.
+   * Renderers that do not support programmatic focus may implement this as
+   * a no-op.
+   *
+   * @param target - Describes which node to focus and the desired behavior.
+   */
+  focusNode?(target: FocusTarget): void;
 }
