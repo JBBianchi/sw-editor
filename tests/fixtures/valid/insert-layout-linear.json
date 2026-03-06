@@ -1,0 +1,28 @@
+{
+  "document": {
+    "dsl": "1.0.0",
+    "namespace": "fixtures",
+    "name": "insert-layout-linear",
+    "version": "1.0.0"
+  },
+  "do": [
+    {
+      "taskA": {
+        "call": "http",
+        "with": {
+          "method": "get",
+          "endpoint": "https://api.example.com/a"
+        }
+      }
+    },
+    {
+      "taskB": {
+        "call": "http",
+        "with": {
+          "method": "get",
+          "endpoint": "https://api.example.com/b"
+        }
+      }
+    }
+  ]
+}

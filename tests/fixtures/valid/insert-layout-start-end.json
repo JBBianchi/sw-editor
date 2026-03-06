@@ -1,0 +1,17 @@
+{
+  "document": {
+    "dsl": "1.0.0",
+    "namespace": "fixtures",
+    "name": "insert-layout-start-end",
+    "version": "1.0.0"
+  },
+  "do": [
+    {
+      "noop": {
+        "set": {
+          "x": 1
+        }
+      }
+    }
+  ]
+}
