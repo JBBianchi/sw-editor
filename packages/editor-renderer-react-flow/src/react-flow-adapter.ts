@@ -13,8 +13,10 @@
 import "@xyflow/react/dist/style.css";
 
 import type {
+  FocusTarget,
   RendererAdapter,
   RendererCapabilitySnapshot,
+  RendererEdgeAnchor,
   RendererEventBridge,
   RendererGraphEdge,
   RendererGraphNode,
@@ -29,6 +31,7 @@ import {
   type OnSelectionChangeParams,
   ReactFlow,
   ReactFlowProvider,
+  useReactFlow,
 } from "@xyflow/react";
 import React, { useLayoutEffect, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -74,6 +77,31 @@ interface FlowController {
    * @param edges - The updated array of React Flow edges.
    */
   updateGraph(nodes: RFNode[], edges: RFEdge[]): void;
+
+  /**
+   * Retrieve a rendered node by its ID.
+   *
+   * @param id - The node ID to look up.
+   * @returns The node object, or `undefined` if not found.
+   */
+  getNode(id: string): RFNode | undefined;
+
+  /**
+   * Retrieve a rendered edge by its ID.
+   *
+   * @param id - The edge ID to look up.
+   * @returns The edge object, or `undefined` if not found.
+   */
+  getEdge(id: string): RFEdge | undefined;
+
+  /**
+   * Center the viewport on the given coordinates.
+   *
+   * @param x - The x coordinate to center on.
+   * @param y - The y coordinate to center on.
+   * @param options - Optional zoom and duration settings.
+   */
+  setCenter(x: number, y: number, options?: { zoom?: number; duration?: number }): void;
 }
 
 /** Props for the internal {@link WorkflowFlowApp} component. */
@@ -178,6 +206,49 @@ function toRFGraph(graph: WorkflowGraph): {
 // ---------------------------------------------------------------------------
 
 /**
+ * Inner component rendered inside {@link ReactFlowProvider} so that the
+ * `useReactFlow` hook is available. Exposes an imperative controller back
+ * to the adapter.
+ *
+ * @param props - Component properties.
+ * @returns A React element containing the React Flow canvas.
+ */
+function WorkflowFlowInner(props: WorkflowFlowAppProps): React.ReactElement {
+  const [nodes, setNodes] = useState<RFNode[]>(props.initialNodes);
+  const [edges, setEdges] = useState<RFEdge[]>(props.initialEdges);
+  const reactFlowInstance = useReactFlow();
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: empty deps array is intentional; controller is published once on mount
+  useLayoutEffect(() => {
+    props.onController({
+      updateGraph(newNodes: RFNode[], newEdges: RFEdge[]): void {
+        setNodes(newNodes);
+        setEdges(newEdges);
+      },
+      getNode(id: string): RFNode | undefined {
+        return reactFlowInstance.getNode(id);
+      },
+      getEdge(id: string): RFEdge | undefined {
+        return reactFlowInstance.getEdge(id);
+      },
+      setCenter(x: number, y: number, options?: { zoom?: number; duration?: number }): void {
+        reactFlowInstance.setCenter(x, y, options);
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return React.createElement(ReactFlow, {
+    nodes,
+    edges,
+    nodeTypes,
+    onSelectionChange: props.onSelectionChange,
+    fitView: true,
+    proOptions: { hideAttribution: false },
+  });
+}
+
+/**
  * Internal React component that renders the React Flow canvas.
  *
  * The component maintains its own nodes/edges state and exposes an imperative
@@ -188,35 +259,10 @@ function toRFGraph(graph: WorkflowGraph): {
  * @returns A React element containing the React Flow canvas wrapped in a provider.
  */
 function WorkflowFlowApp(props: WorkflowFlowAppProps): React.ReactElement {
-  const [nodes, setNodes] = useState<RFNode[]>(props.initialNodes);
-  const [edges, setEdges] = useState<RFEdge[]>(props.initialEdges);
-
-  // Expose an imperative controller to the adapter immediately after mount.
-  // Using useLayoutEffect ensures the controller is available before the
-  // browser has painted, which prevents a race between mount() returning and
-  // the first update() call arriving.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: empty deps array is intentional; controller is published once on mount
-  useLayoutEffect(() => {
-    props.onController({
-      updateGraph(newNodes: RFNode[], newEdges: RFEdge[]): void {
-        setNodes(newNodes);
-        setEdges(newEdges);
-      },
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return React.createElement(
     ReactFlowProvider,
     null,
-    React.createElement(ReactFlow, {
-      nodes,
-      edges,
-      nodeTypes,
-      onSelectionChange: props.onSelectionChange,
-      fitView: true,
-      proOptions: { hideAttribution: false },
-    }),
+    React.createElement(WorkflowFlowInner, props),
   );
 }
 
@@ -349,6 +395,9 @@ export class ReactFlowAdapter implements RendererAdapter {
   /** Whether {@link dispose} has been called. */
   private disposed = false;
 
+  /** The most recently rendered workflow graph, used for edge lookups. */
+  private lastGraph: WorkflowGraph | null = null;
+
   /**
    * Attach the React Flow renderer to `container` and render the initial graph.
    *
@@ -368,6 +417,7 @@ export class ReactFlowAdapter implements RendererAdapter {
       throw new Error("ReactFlowAdapter: mount() called after dispose()");
     }
 
+    this.lastGraph = graph;
     const { nodes, edges } = toRFGraph(graph);
     this.root = createRoot(container);
 
@@ -407,8 +457,69 @@ export class ReactFlowAdapter implements RendererAdapter {
       throw new Error("ReactFlowAdapter: update() called before mount() completed");
     }
 
+    this.lastGraph = graph;
     const { nodes, edges } = toRFGraph(graph);
     this.controller.updateGraph(nodes, edges);
+  }
+
+  /**
+   * Retrieve the visual anchor point for the given edge.
+   *
+   * Computes the geometric midpoint between the source and target node
+   * positions in the rendered layout. Returns `null` if the edge is not
+   * found in the current graph or the adapter is not mounted.
+   *
+   * @param edgeId - The identity of the edge to query.
+   * @returns The edge anchor with midpoint coordinates, or `null` if unavailable.
+   */
+  getEdgeAnchor(edgeId: string): RendererEdgeAnchor | null {
+    if (this.disposed || this.controller === null || this.lastGraph === null) {
+      return null;
+    }
+
+    const edge = this.lastGraph.edges.find((e) => e.id === edgeId);
+    if (!edge) {
+      return null;
+    }
+
+    const sourceIndex = this.lastGraph.nodes.findIndex((n) => n.id === edge.source);
+    const targetIndex = this.lastGraph.nodes.findIndex((n) => n.id === edge.target);
+    if (sourceIndex < 0 || targetIndex < 0) {
+      return null;
+    }
+
+    const sourcePos = nodePosition(sourceIndex);
+    const targetPos = nodePosition(targetIndex);
+
+    return {
+      edgeId,
+      sourceNodeId: edge.source,
+      targetNodeId: edge.target,
+      x: (sourcePos.x + targetPos.x) / 2,
+      y: (sourcePos.y + targetPos.y) / 2,
+    };
+  }
+
+  /**
+   * Bring a node into view in the renderer viewport.
+   *
+   * Scrolls and zooms the viewport to center the target node. If the node
+   * is not found or the adapter is not mounted, this is a no-op.
+   *
+   * @param target - Describes which node to focus and the desired behavior.
+   */
+  focusNode(target: FocusTarget): void {
+    if (this.disposed || this.controller === null || this.lastGraph === null) {
+      return;
+    }
+
+    const nodeIndex = this.lastGraph.nodes.findIndex((n) => n.id === target.nodeId);
+    if (nodeIndex < 0) {
+      return;
+    }
+
+    const pos = nodePosition(nodeIndex);
+    this.controller.setCenter(pos.x, pos.y, { duration: 200 });
   }
 
   /**
@@ -425,6 +536,7 @@ export class ReactFlowAdapter implements RendererAdapter {
     this.disposed = true;
     this.events.offSelectionChange();
     this.controller = null;
+    this.lastGraph = null;
     if (this.root !== null) {
       this.root.unmount();
       this.root = null;
