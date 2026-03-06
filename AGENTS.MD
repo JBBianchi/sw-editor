@@ -104,6 +104,7 @@ If implementation requires violating a constitution principle, stop and request 
 
 From repo root:
 
+0. Build, test, lint passes for all projects.
 1. Feature readiness:
    - Bash: `bash .specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks`
    - PowerShell: `powershell -ExecutionPolicy Bypass -File .specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks`
