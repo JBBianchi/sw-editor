@@ -74,6 +74,10 @@ Additional scripts available at the root:
 |--------|---------|---------|
 | `lint` | `pnpm lint` | Run Biome linter across the workspace |
 | `format` | `pnpm format` | Apply Biome auto-formatting |
+| `storybook` | `pnpm storybook` | Start Storybook dev server at http://localhost:6006 |
+| `build-storybook` | `pnpm build-storybook` | Build a static Storybook site |
+
+See [`docs/storybook.md`](docs/storybook.md) for how to run Storybook, build it, and add new stories for React and web-component packages.
 
 ---
 
