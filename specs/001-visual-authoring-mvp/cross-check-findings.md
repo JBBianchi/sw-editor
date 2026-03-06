@@ -344,10 +344,10 @@
 
 **Requirement IDs affected**: SC-001, SC-007
 
-**Resolution** (tasks #141 and #126):
-- `playwright.config.ts` now has a `webServer` block that runs `pnpm --filter @sw-editor/demo build && pnpm --filter @sw-editor/demo preview` and waits for `http://localhost:4173`.
-- `demo/vite.config.ts` adds aliases for `@sw-editor/editor-core` and `@sw-editor/editor-host-client/rete-lit` (following the same pattern as `example/vanilla-js/vite.config.ts`) so the demo builds from TypeScript source without a separate package build step.
-- `pnpm test:e2e` now starts the demo automatically.  Tests that require the full `sw-editor` component are marked `test.fixme`; structural smoke tests (ARIA landmarks, live-region presence) are left active.
+**Resolution** (tasks #141, #126, and #157):
+- `playwright.config.ts` now has a `webServer` block that runs `pnpm --filter @sw-editor/example-e2e-harness build && pnpm --filter @sw-editor/example-e2e-harness preview` and waits for `http://localhost:4173`.
+- `example/e2e-harness/vite.config.ts` adds aliases for `@sw-editor/editor-core` and `@sw-editor/editor-host-client/rete-lit` (following the same pattern as `example/vanilla-js/vite.config.ts`) so the harness builds from TypeScript source without a separate package build step.
+- `pnpm test:e2e` now starts the e2e harness automatically.  Tests that require the full `sw-editor` component are marked `test.fixme`; structural smoke tests (ARIA landmarks, live-region presence) are left active.
 
 **SC-007 status**: CONFIRMED COVERED.
 **SC-001 status**: Infrastructure complete; full coverage requires `sw-editor` component implementation (remove `test.fixme` markers at that point).
