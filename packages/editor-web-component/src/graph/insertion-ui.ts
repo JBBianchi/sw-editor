@@ -328,7 +328,7 @@ export class InsertionUI {
       item.setAttribute("role", "menuitem");
       item.className = "sw-task-menu__item";
       item.textContent = taskType.label;
-      item.dataset.taskTypeId = taskType.id;
+      item.dataset["taskTypeId"] = taskType.id;
 
       item.addEventListener("click", () => {
         this.closeTaskMenu();

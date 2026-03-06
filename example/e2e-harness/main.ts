@@ -25,8 +25,8 @@ import {
   RevisionCounter,
   validateWorkflow,
 } from "@sw-editor/editor-core";
-import { ReteLitAdapter } from "@sw-editor/editor-host-client/rete-lit";
 import { ReactFlowAdapter } from "@sw-editor/editor-host-client/react-flow";
+import { ReteLitAdapter } from "@sw-editor/editor-host-client/rete-lit";
 
 // ---------------------------------------------------------------------------
 // Task type catalogue (mirrors InsertionUI.MVP_TASK_TYPES)
@@ -523,8 +523,7 @@ function wireDiagnostics(): void {
         return;
       }
 
-      const format =
-        content.startsWith("{") || content.startsWith("[") ? "json" : "yaml";
+      const format = content.startsWith("{") || content.startsWith("[") ? "json" : "yaml";
 
       const diagnostics = validateWorkflow({ format, content });
 

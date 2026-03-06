@@ -360,23 +360,22 @@ test.describe("Quickstart Scenario 4: Diagnostics Flow", () => {
    *
    * Quickstart step: "Enter an invalid transition target."
    */
-  test.fixme(
-    "entering an invalid transition target triggers a diagnostics event",
-    async ({ page }) => {
-      await openEditor(page);
-      const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
-      await newWorkflowBtn.press("Enter");
+  test.fixme("entering an invalid transition target triggers a diagnostics event", async ({
+    page,
+  }) => {
+    await openEditor(page);
+    const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
+    await newWorkflowBtn.press("Enter");
 
-      const panel = page.locator(PROPERTY_PANEL_SELECTOR);
-      const transitionInput = panel
-        .locator('[aria-label*="transition" i], [data-field="transition"]')
-        .first();
-      await transitionInput.fill("__invalid_target__");
+    const panel = page.locator(PROPERTY_PANEL_SELECTOR);
+    const transitionInput = panel
+      .locator('[aria-label*="transition" i], [data-field="transition"]')
+      .first();
+    await transitionInput.fill("__invalid_target__");
 
-      const diagnosticsRegion = page.locator(DIAGNOSTICS_REGION_SELECTOR).first();
-      await expect(diagnosticsRegion).toBeAttached();
-    },
-  );
+    const diagnosticsRegion = page.locator(DIAGNOSTICS_REGION_SELECTOR).first();
+    await expect(diagnosticsRegion).toBeAttached();
+  });
 
   /**
    * Verifies that a node-level error indicator appears when an invalid
@@ -385,25 +384,22 @@ test.describe("Quickstart Scenario 4: Diagnostics Flow", () => {
    * Marked fixme: node error indicators are not yet rendered by the demo
    * harness.  Remove fixme once the graph node error UI lands.
    */
-  test.fixme(
-    "diagnostic error is reflected in local UI cues on the node",
-    async ({ page }) => {
-      await openEditor(page);
-      const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
-      await newWorkflowBtn.press("Enter");
+  test.fixme("diagnostic error is reflected in local UI cues on the node", async ({ page }) => {
+    await openEditor(page);
+    const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
+    await newWorkflowBtn.press("Enter");
 
-      const panel = page.locator(PROPERTY_PANEL_SELECTOR);
-      const transitionInput = panel
-        .locator('[aria-label*="transition" i], [data-field="transition"]')
-        .first();
-      await transitionInput.fill("__invalid_target__");
+    const panel = page.locator(PROPERTY_PANEL_SELECTOR);
+    const transitionInput = panel
+      .locator('[aria-label*="transition" i], [data-field="transition"]')
+      .first();
+    await transitionInput.fill("__invalid_target__");
 
-      const errorIndicator = page
-        .locator('[data-testid="node-error"], [aria-label*="error" i]')
-        .first();
-      await expect(errorIndicator).toBeVisible();
-    },
-  );
+    const errorIndicator = page
+      .locator('[data-testid="node-error"], [aria-label*="error" i]')
+      .first();
+    await expect(errorIndicator).toBeVisible();
+  });
 
   /**
    * Verifies that explicit validation surfaces a global error summary.

@@ -16,7 +16,7 @@
  * @module example/tests/host-events.spec
  */
 
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
 // Selectors — match the IDs defined in example/host-events/index.html
@@ -60,7 +60,14 @@ test.describe("host-events example — page load", () => {
 
   test("all simulation buttons are visible and enabled", async ({ page }) => {
     await page.goto("/");
-    for (const selector of [BTN_SIMULATE_LOAD, BTN_SIMULATE_DIAG, BTN_SIMULATE_SELECTION, BTN_SIMULATE_ERROR, BTN_GET_CAP, BTN_CLEAR]) {
+    for (const selector of [
+      BTN_SIMULATE_LOAD,
+      BTN_SIMULATE_DIAG,
+      BTN_SIMULATE_SELECTION,
+      BTN_SIMULATE_ERROR,
+      BTN_GET_CAP,
+      BTN_CLEAR,
+    ]) {
       await expect(page.locator(selector)).toBeVisible();
       await expect(page.locator(selector)).toBeEnabled();
     }

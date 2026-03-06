@@ -1,5 +1,5 @@
-import { defineConfig, devices } from "@playwright/test";
 import path from "node:path";
+import { defineConfig, devices } from "@playwright/test";
 
 /**
  * Playwright end-to-end test configuration for the example apps.
@@ -17,7 +17,12 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
-  reporter: [["html", { open: "never", outputFolder: path.join(__dirname, "../playwright-report-examples") }]],
+  reporter: [
+    [
+      "html",
+      { open: "never", outputFolder: path.join(__dirname, "../playwright-report-examples") },
+    ],
+  ],
   projects: [
     {
       name: "vanilla-js",

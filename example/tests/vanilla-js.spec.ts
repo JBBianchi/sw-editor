@@ -14,7 +14,7 @@
  * @module example/tests/vanilla-js.spec
  */
 
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
 // Selectors — match the IDs defined in example/vanilla-js/index.html

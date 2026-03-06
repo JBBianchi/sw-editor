@@ -1,5 +1,5 @@
-import { defineConfig } from "vite";
 import { resolve } from "node:path";
+import { defineConfig } from "vite";
 
 /**
  * Vite configuration for the vanilla-js example.
@@ -14,10 +14,7 @@ export default defineConfig({
         __dirname,
         "../../packages/editor-host-client/src/index.ts",
       ),
-      "@sw-editor/editor-core": resolve(
-        __dirname,
-        "../../packages/editor-core/src/index.ts",
-      ),
+      "@sw-editor/editor-core": resolve(__dirname, "../../packages/editor-core/src/index.ts"),
     },
   },
 });
