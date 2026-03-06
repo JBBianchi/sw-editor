@@ -21,20 +21,20 @@
  * @module example/host-events/main
  */
 
-import { EventBridge } from "@sw-editor/editor-web-component";
-import {
-  EditorEventName,
-  CONTRACT_VERSION,
-  TARGET_VERSION,
-  SUPPORTED_VERSIONS,
-} from "@sw-editor/editor-host-client";
 import type {
-  WorkflowChangedPayload,
-  EditorDiagnosticsChangedPayload,
-  EditorSelectionChangedPayload,
-  EditorErrorPayload,
   CapabilitySnapshot,
+  EditorDiagnosticsChangedPayload,
+  EditorErrorPayload,
+  EditorSelectionChangedPayload,
+  WorkflowChangedPayload,
 } from "@sw-editor/editor-host-client";
+import {
+  CONTRACT_VERSION,
+  EditorEventName,
+  SUPPORTED_VERSIONS,
+  TARGET_VERSION,
+} from "@sw-editor/editor-host-client";
+import { EventBridge } from "@sw-editor/editor-web-component";
 
 // ---------------------------------------------------------------------------
 // Shared event target — in a real integration this would be the <sw-editor>
@@ -176,8 +176,7 @@ btnGetCap.addEventListener("click", () => {
 
 /** Clears the event log. */
 btnClear.addEventListener("click", () => {
-  eventList.innerHTML =
-    '<li><span class="empty">No events yet — click a button above.</span></li>';
+  eventList.innerHTML = '<li><span class="empty">No events yet — click a button above.</span></li>';
   eventCount.textContent = "0";
   _eventTotal = 0;
 });

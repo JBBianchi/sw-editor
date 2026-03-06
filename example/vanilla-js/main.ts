@@ -18,8 +18,8 @@
  * @module example/vanilla-js/main
  */
 
-import { exportWorkflowSource, setCurrentSource } from "@sw-editor/editor-host-client";
 import type { WorkflowSource } from "@sw-editor/editor-host-client";
+import { exportWorkflowSource, setCurrentSource } from "@sw-editor/editor-host-client";
 
 // The fixture is bundled at build time — no runtime network call needed.
 import simpleWorkflow from "../../tests/fixtures/valid/simple.json";
@@ -108,11 +108,7 @@ async function runExport(format: "json" | "yaml"): Promise<void> {
  * @param text - New text content.
  * @param cssClass - CSS class to apply: `"ok"`, `"error"`, or `""` for neutral.
  */
-function setStatus(
-  el: HTMLParagraphElement,
-  text: string,
-  cssClass: "ok" | "error" | "",
-): void {
+function setStatus(el: HTMLParagraphElement, text: string, cssClass: "ok" | "error" | ""): void {
   el.textContent = text;
   el.className = `status${cssClass ? ` ${cssClass}` : ""}`;
 }

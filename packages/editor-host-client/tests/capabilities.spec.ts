@@ -8,13 +8,13 @@
  */
 
 import { describe, expect, it } from "vitest";
+import type { RendererCapabilitySnapshot } from "../src/contracts/capabilities.js";
 import {
   CONTRACT_VERSION,
+  createCapabilitySnapshot,
   SUPPORTED_VERSIONS,
   TARGET_VERSION,
-  createCapabilitySnapshot,
 } from "../src/contracts/capabilities.js";
-import type { RendererCapabilitySnapshot } from "../src/contracts/capabilities.js";
 
 // ---------------------------------------------------------------------------
 // Shared test fixture — a minimal RendererCapabilitySnapshot for a rete-lit renderer.

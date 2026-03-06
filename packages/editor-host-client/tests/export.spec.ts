@@ -7,13 +7,8 @@
  */
 
 import { beforeEach, describe, expect, it } from "vitest";
-
-import {
-  exportWorkflowSource,
-  getCurrentSource,
-  setCurrentSource,
-} from "../src/export.js";
 import type { WorkflowSource } from "../src/contracts/types.js";
+import { exportWorkflowSource, getCurrentSource, setCurrentSource } from "../src/export.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures
