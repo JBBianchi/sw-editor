@@ -12,11 +12,11 @@
  */
 
 import {
-  INITIAL_EDGE_ID,
-  START_NODE_ID,
   END_NODE_ID,
+  INITIAL_EDGE_ID,
   insertTask,
   RevisionCounter,
+  START_NODE_ID,
 } from "@sw-editor/editor-core";
 import { describe, expect, it } from "vitest";
 
@@ -50,7 +50,7 @@ describe("repeated-insert-layout — US3: repeated adjacent insertions remain re
       const edgeR1ToEnd = r1.graph.edges.find((e) => e.target === END_NODE_ID);
       expect(edgeR1ToEnd).toBeDefined();
       const r2 = insertTask(r1.graph, counter, {
-        edgeId: edgeR1ToEnd!.id,
+        edgeId: edgeR1ToEnd?.id,
         taskReference: "seqTask2",
       });
 
@@ -58,18 +58,12 @@ describe("repeated-insert-layout — US3: repeated adjacent insertions remain re
       const edgeR2ToEnd = r2.graph.edges.find((e) => e.target === END_NODE_ID);
       expect(edgeR2ToEnd).toBeDefined();
       const r3 = insertTask(r2.graph, counter, {
-        edgeId: edgeR2ToEnd!.id,
+        edgeId: edgeR2ToEnd?.id,
         taskReference: "seqTask3",
       });
 
       // Final graph: start → r1 → r2 → r3 → end
-      assertNodeOrder(r3.graph, [
-        START_NODE_ID,
-        r1.nodeId,
-        r2.nodeId,
-        r3.nodeId,
-        END_NODE_ID,
-      ]);
+      assertNodeOrder(r3.graph, [START_NODE_ID, r1.nodeId, r2.nodeId, r3.nodeId, END_NODE_ID]);
 
       // Verify total counts.
       expect(r3.graph.nodes).toHaveLength(5);
@@ -90,21 +84,21 @@ describe("repeated-insert-layout — US3: repeated adjacent insertions remain re
       const edgeStartToR1 = r1.graph.edges.find((e) => e.source === START_NODE_ID);
       expect(edgeStartToR1).toBeDefined();
       const r2 = insertTask(r1.graph, counter, {
-        edgeId: edgeStartToR1!.id,
+        edgeId: edgeStartToR1?.id,
         taskReference: "headTask2",
       });
 
       const edgeStartToR2 = r2.graph.edges.find((e) => e.source === START_NODE_ID);
       expect(edgeStartToR2).toBeDefined();
       const r3 = insertTask(r2.graph, counter, {
-        edgeId: edgeStartToR2!.id,
+        edgeId: edgeStartToR2?.id,
         taskReference: "headTask3",
       });
 
       const edgeStartToR3 = r3.graph.edges.find((e) => e.source === START_NODE_ID);
       expect(edgeStartToR3).toBeDefined();
       const r4 = insertTask(r3.graph, counter, {
-        edgeId: edgeStartToR3!.id,
+        edgeId: edgeStartToR3?.id,
         taskReference: "headTask4",
       });
 
@@ -138,19 +132,15 @@ describe("repeated-insert-layout — US3: repeated adjacent insertions remain re
       graph = r1.graph;
       // Now: start → taskA → r1 → taskB → end
 
-      const edgeR1ToTaskB = graph.edges.find(
-        (e) => e.source === r1.nodeId && e.target === "taskB",
-      );
+      const edgeR1ToTaskB = graph.edges.find((e) => e.source === r1.nodeId && e.target === "taskB");
       expect(edgeR1ToTaskB).toBeDefined();
-      const r2 = insertTaskAtEdge(graph, edgeR1ToTaskB!.id, "midTask2");
+      const r2 = insertTaskAtEdge(graph, edgeR1ToTaskB?.id, "midTask2");
       graph = r2.graph;
       // Now: start → taskA → r1 → r2 → taskB → end
 
-      const edgeR2ToTaskB = graph.edges.find(
-        (e) => e.source === r2.nodeId && e.target === "taskB",
-      );
+      const edgeR2ToTaskB = graph.edges.find((e) => e.source === r2.nodeId && e.target === "taskB");
       expect(edgeR2ToTaskB).toBeDefined();
-      const r3 = insertTaskAtEdge(graph, edgeR2ToTaskB!.id, "midTask3");
+      const r3 = insertTaskAtEdge(graph, edgeR2ToTaskB?.id, "midTask3");
       graph = r3.graph;
 
       // Final: start → taskA → r1 → r2 → r3 → taskB → end
@@ -187,14 +177,14 @@ describe("repeated-insert-layout — US3: repeated adjacent insertions remain re
       const edgeR1ToEnd = r1.graph.edges.find((e) => e.target === END_NODE_ID);
       expect(edgeR1ToEnd).toBeDefined();
       const r2 = insertTask(r1.graph, counter, {
-        edgeId: edgeR1ToEnd!.id,
+        edgeId: edgeR1ToEnd?.id,
         taskReference: "connTask2",
       });
 
       const edgeR2ToEnd = r2.graph.edges.find((e) => e.target === END_NODE_ID);
       expect(edgeR2ToEnd).toBeDefined();
       const r3 = insertTask(r2.graph, counter, {
-        edgeId: edgeR2ToEnd!.id,
+        edgeId: edgeR2ToEnd?.id,
         taskReference: "connTask3",
       });
 
@@ -209,10 +199,7 @@ describe("repeated-insert-layout — US3: repeated adjacent insertions remain re
         const connectingEdges = finalGraph.edges.filter(
           (e) => e.source === src && e.target === tgt,
         );
-        expect(
-          connectingEdges,
-          `expected exactly one edge from ${src} to ${tgt}`,
-        ).toHaveLength(1);
+        expect(connectingEdges, `expected exactly one edge from ${src} to ${tgt}`).toHaveLength(1);
       }
 
       // No extra edges beyond the expected chain.
@@ -223,7 +210,7 @@ describe("repeated-insert-layout — US3: repeated adjacent insertions remain re
       let graph = loadFixtureGraph("insert-layout-linear.json");
 
       // Original edges: start→taskA, taskA→taskB, taskB→end
-      const originalEdgeIds = new Set(graph.edges.map((e) => e.id));
+      const _originalEdgeIds = new Set(graph.edges.map((e) => e.id));
 
       const r1 = insertTaskAtEdge(graph, "taskA->taskB", "staleCheck1");
       graph = r1.graph;
@@ -237,17 +224,15 @@ describe("repeated-insert-layout — US3: repeated adjacent insertions remain re
       expect(currentEdgeIds.has(`taskB->${END_NODE_ID}`)).toBe(true);
 
       // Insert another on r1→taskB edge.
-      const edgeR1ToTaskB = graph.edges.find(
-        (e) => e.source === r1.nodeId && e.target === "taskB",
-      );
+      const edgeR1ToTaskB = graph.edges.find((e) => e.source === r1.nodeId && e.target === "taskB");
       expect(edgeR1ToTaskB).toBeDefined();
 
-      const r2 = insertTaskAtEdge(graph, edgeR1ToTaskB!.id, "staleCheck2");
+      const r2 = insertTaskAtEdge(graph, edgeR1ToTaskB?.id, "staleCheck2");
       graph = r2.graph;
 
       // The r1→taskB edge should now be gone.
       const finalEdgeIds = new Set(graph.edges.map((e) => e.id));
-      expect(finalEdgeIds.has(edgeR1ToTaskB!.id)).toBe(false);
+      expect(finalEdgeIds.has(edgeR1ToTaskB?.id)).toBe(false);
 
       // All remaining edges should reference nodes that exist in the graph.
       const nodeIds = new Set(graph.nodes.map((n) => n.id));
@@ -284,7 +269,7 @@ describe("repeated-insert-layout — US3: repeated adjacent insertions remain re
         const edgeToEnd = current.edges.find((e) => e.target === END_NODE_ID);
         expect(edgeToEnd).toBeDefined();
         const result = insertTask(current, counter, {
-          edgeId: edgeToEnd!.id,
+          edgeId: edgeToEnd?.id,
           taskReference: `overlapTask${i}`,
         });
         current = result.graph;

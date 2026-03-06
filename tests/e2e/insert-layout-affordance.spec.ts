@@ -29,12 +29,10 @@ const INSERTION_BUTTON_SELECTOR = 'button[aria-label="Insert task"]';
 const NEW_WORKFLOW_BUTTON_SELECTOR = 'button[aria-label="Create new workflow"]';
 
 /** Task type selection menu opened by an insertion affordance. */
-const TASK_MENU_SELECTOR =
-  '[role="menu"][aria-label="Select task type to insert"]';
+const TASK_MENU_SELECTOR = '[role="menu"][aria-label="Select task type to insert"]';
 
 /** Canvas / viewport container used for pan/zoom interactions. */
-const CANVAS_SELECTOR =
-  '[data-testid="editor-canvas"], .react-flow__viewport, .react-flow';
+const CANVAS_SELECTOR = '[data-testid="editor-canvas"], .react-flow__viewport, .react-flow';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -78,10 +76,7 @@ async function createNewWorkflow(page: Page): Promise<void> {
  * @param selector - CSS selector for the target element.
  * @returns The `{ x, y }` center coordinates of the element bounding box.
  */
-async function getElementCenter(
-  page: Page,
-  selector: string,
-): Promise<{ x: number; y: number }> {
+async function _getElementCenter(page: Page, selector: string): Promise<{ x: number; y: number }> {
   const box = await page.locator(selector).first().boundingBox();
   if (!box) {
     throw new Error(`Element not found or not visible: ${selector}`);
@@ -95,13 +90,8 @@ async function getElementCenter(
  * @param page - The Playwright {@link Page} object.
  * @returns The `{ x, y }` center coordinates of the affordance button.
  */
-async function getAffordanceCenter(
-  page: Page,
-): Promise<{ x: number; y: number }> {
-  const box = await page
-    .locator(INSERTION_BUTTON_SELECTOR)
-    .first()
-    .boundingBox();
+async function getAffordanceCenter(page: Page): Promise<{ x: number; y: number }> {
+  const box = await page.locator(INSERTION_BUTTON_SELECTOR).first().boundingBox();
   if (!box) {
     throw new Error("Insertion affordance button not found or not visible");
   }
@@ -119,14 +109,10 @@ async function getAffordanceCenter(
  * @param page - The Playwright {@link Page} object.
  * @returns The `{ x, y }` midpoint between the source and target node centers.
  */
-async function getEdgeMidpoint(
-  page: Page,
-): Promise<{ x: number; y: number }> {
+async function getEdgeMidpoint(page: Page): Promise<{ x: number; y: number }> {
   // Retrieve edge endpoint node positions by locating start and end nodes.
   // In a new workflow, the initial graph has start → end with one edge.
-  const startNode = page.locator(
-    '[data-node-type="start"], [data-testid="graph-node"]',
-  );
+  const startNode = page.locator('[data-node-type="start"], [data-testid="graph-node"]');
   const endNode = page.locator('[data-node-type="end"]');
 
   const startBox = await startNode.first().boundingBox();
@@ -158,10 +144,7 @@ async function getEdgeMidpoint(
  * @param b - Second point.
  * @returns Distance in pixels.
  */
-function distance(
-  a: { x: number; y: number },
-  b: { x: number; y: number },
-): number {
+function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
@@ -169,17 +152,14 @@ function distance(
 // 1. Midpoint positioning
 // ---------------------------------------------------------------------------
 
-test.describe.fixme(
-  "Insertion affordance — midpoint positioning (US2, SC-002)",
-  () => {
+test.describe
+  .fixme("Insertion affordance — midpoint positioning (US2, SC-002)", () => {
     test.beforeEach(async ({ page }) => {
       await openEditor(page);
       await createNewWorkflow(page);
     });
 
-    test("'+' button is positioned within 12px of the edge midpoint", async ({
-      page,
-    }) => {
+    test("'+' button is positioned within 12px of the edge midpoint", async ({ page }) => {
       const affordanceCenter = await getAffordanceCenter(page);
       const midpoint = await getEdgeMidpoint(page);
 
@@ -192,15 +172,10 @@ test.describe.fixme(
       ).toBeLessThanOrEqual(MIDPOINT_TOLERANCE_PX);
     });
 
-    test("all insertion affordances are within 12px of their edge midpoints", async ({
-      page,
-    }) => {
+    test("all insertion affordances are within 12px of their edge midpoints", async ({ page }) => {
       const affordances = page.locator(INSERTION_BUTTON_SELECTOR);
       const count = await affordances.count();
-      expect(
-        count,
-        "At least one insertion affordance should exist",
-      ).toBeGreaterThan(0);
+      expect(count, "At least one insertion affordance should exist").toBeGreaterThan(0);
 
       for (let i = 0; i < count; i++) {
         const box = await affordances.nth(i).boundingBox();
@@ -212,28 +187,24 @@ test.describe.fixme(
         // A precise per-edge midpoint check requires edge-specific DOM
         // attributes that may vary by renderer; the primary midpoint assertion
         // is covered by the first test in this suite.
-        expect(box!.width, `Affordance ${i} should have non-zero width`).toBeGreaterThan(0);
-        expect(box!.height, `Affordance ${i} should have non-zero height`).toBeGreaterThan(0);
+        expect(box?.width, `Affordance ${i} should have non-zero width`).toBeGreaterThan(0);
+        expect(box?.height, `Affordance ${i} should have non-zero height`).toBeGreaterThan(0);
       }
     });
-  },
-);
+  });
 
 // ---------------------------------------------------------------------------
 // 2. Position stability after pan/zoom
 // ---------------------------------------------------------------------------
 
-test.describe.fixme(
-  "Insertion affordance — position after pan/zoom (US2)",
-  () => {
+test.describe
+  .fixme("Insertion affordance — position after pan/zoom (US2)", () => {
     test.beforeEach(async ({ page }) => {
       await openEditor(page);
       await createNewWorkflow(page);
     });
 
-    test("affordance remains within 12px of edge midpoint after pan", async ({
-      page,
-    }) => {
+    test("affordance remains within 12px of edge midpoint after pan", async ({ page }) => {
       // Record the initial relative offset between affordance and midpoint.
       const initialAffordance = await getAffordanceCenter(page);
       const initialMidpoint = await getEdgeMidpoint(page);
@@ -244,8 +215,8 @@ test.describe.fixme(
       const canvasBox = await canvas.boundingBox();
       expect(canvasBox, "Canvas element must be visible").not.toBeNull();
 
-      const startX = canvasBox!.x + canvasBox!.width / 2;
-      const startY = canvasBox!.y + canvasBox!.height / 2;
+      const startX = canvasBox?.x + canvasBox?.width / 2;
+      const startY = canvasBox?.y + canvasBox?.height / 2;
 
       await page.mouse.move(startX, startY);
       await page.mouse.down();
@@ -269,16 +240,14 @@ test.describe.fixme(
       ).toBeLessThanOrEqual(MIDPOINT_TOLERANCE_PX);
     });
 
-    test("affordance remains within 12px of edge midpoint after zoom", async ({
-      page,
-    }) => {
+    test("affordance remains within 12px of edge midpoint after zoom", async ({ page }) => {
       // Zoom in using Ctrl+wheel on the canvas.
       const canvas = page.locator(CANVAS_SELECTOR).first();
       const canvasBox = await canvas.boundingBox();
       expect(canvasBox, "Canvas element must be visible").not.toBeNull();
 
-      const centerX = canvasBox!.x + canvasBox!.width / 2;
-      const centerY = canvasBox!.y + canvasBox!.height / 2;
+      const centerX = canvasBox?.x + canvasBox?.width / 2;
+      const centerY = canvasBox?.y + canvasBox?.height / 2;
 
       await page.mouse.move(centerX, centerY);
       await page.mouse.wheel(0, -200);
@@ -304,8 +273,8 @@ test.describe.fixme(
       const canvasBox = await canvas.boundingBox();
       expect(canvasBox, "Canvas element must be visible").not.toBeNull();
 
-      const centerX = canvasBox!.x + canvasBox!.width / 2;
-      const centerY = canvasBox!.y + canvasBox!.height / 2;
+      const centerX = canvasBox?.x + canvasBox?.width / 2;
+      const centerY = canvasBox?.y + canvasBox?.height / 2;
 
       // Pan first.
       await page.mouse.move(centerX, centerY);
@@ -330,24 +299,20 @@ test.describe.fixme(
           `of edge midpoint (distance: ${dist.toFixed(1)}px)`,
       ).toBeLessThanOrEqual(MIDPOINT_TOLERANCE_PX);
     });
-  },
-);
+  });
 
 // ---------------------------------------------------------------------------
 // 3. Keyboard operability
 // ---------------------------------------------------------------------------
 
-test.describe.fixme(
-  "Insertion affordance — keyboard operability (US2)",
-  () => {
+test.describe
+  .fixme("Insertion affordance — keyboard operability (US2)", () => {
     test.beforeEach(async ({ page }) => {
       await openEditor(page);
       await createNewWorkflow(page);
     });
 
-    test("insertion affordance is reachable via Tab navigation", async ({
-      page,
-    }) => {
+    test("insertion affordance is reachable via Tab navigation", async ({ page }) => {
       const maxTabs = 50;
       let reached = false;
 
@@ -355,11 +320,7 @@ test.describe.fixme(
         await page.keyboard.press("Tab");
 
         const focused = page.locator(INSERTION_BUTTON_SELECTOR).first();
-        if (
-          await focused
-            .evaluate((el) => el === document.activeElement)
-            .catch(() => false)
-        ) {
+        if (await focused.evaluate((el) => el === document.activeElement).catch(() => false)) {
           reached = true;
           break;
         }
@@ -371,9 +332,7 @@ test.describe.fixme(
       ).toBe(true);
     });
 
-    test("Enter key activates the insertion menu from focused affordance", async ({
-      page,
-    }) => {
+    test("Enter key activates the insertion menu from focused affordance", async ({ page }) => {
       const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
       await affordance.focus();
       await expect(affordance).toBeFocused();
@@ -384,9 +343,7 @@ test.describe.fixme(
       await expect(menu).toBeVisible();
     });
 
-    test("Space key activates the insertion menu from focused affordance", async ({
-      page,
-    }) => {
+    test("Space key activates the insertion menu from focused affordance", async ({ page }) => {
       const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
       await affordance.focus();
       await expect(affordance).toBeFocused();
@@ -397,9 +354,7 @@ test.describe.fixme(
       await expect(menu).toBeVisible();
     });
 
-    test("Escape closes the menu and returns focus to the affordance", async ({
-      page,
-    }) => {
+    test("Escape closes the menu and returns focus to the affordance", async ({ page }) => {
       const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
       await affordance.press("Enter");
 
@@ -412,9 +367,7 @@ test.describe.fixme(
       await expect(affordance).toBeFocused();
     });
 
-    test("keyboard-activated insertion completes without mouse interaction", async ({
-      page,
-    }) => {
+    test("keyboard-activated insertion completes without mouse interaction", async ({ page }) => {
       // Tab to the affordance.
       const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
       await affordance.focus();
@@ -431,5 +384,4 @@ test.describe.fixme(
       // The menu should close after selection.
       await expect(menu).not.toBeVisible();
     });
-  },
-);
+  });

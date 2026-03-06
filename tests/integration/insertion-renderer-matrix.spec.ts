@@ -130,11 +130,11 @@ vi.mock("@xyflow/react", () => ({
 
 import {
   bootstrapWorkflowGraph,
+  END_NODE_ID,
   INITIAL_EDGE_ID,
   insertTask,
   RevisionCounter,
   START_NODE_ID,
-  END_NODE_ID,
 } from "@sw-editor/editor-core";
 import type {
   FocusTarget,
@@ -316,7 +316,7 @@ describe("Insertion renderer matrix", () => {
         const firstEdge = updatedGraph.edges.find((e) => e.source === START_NODE_ID);
         expect(firstEdge, "edge from start to new node must exist").toBeDefined();
 
-        const anchor = stub.getEdgeAnchor(updatedGraph, firstEdge!.id);
+        const anchor = stub.getEdgeAnchor(updatedGraph, firstEdge?.id);
         expect(anchor, "getEdgeAnchor must return an anchor for the edge").not.toBeNull();
 
         // Compute the expected midpoint from the linear layout.
@@ -325,16 +325,16 @@ describe("Insertion renderer matrix", () => {
         const expectedMidX = (startIndex * NODE_H_GAP + newNodeIndex * NODE_H_GAP) / 2;
         const expectedMidY = 0;
 
-        const dist = distance(anchor!.x, anchor!.y, expectedMidX, expectedMidY);
+        const dist = distance(anchor?.x, anchor?.y, expectedMidX, expectedMidY);
         expect(
           dist,
-          `Edge anchor midpoint (${anchor!.x}, ${anchor!.y}) is ${dist.toFixed(1)}px ` +
+          `Edge anchor midpoint (${anchor?.x}, ${anchor?.y}) is ${dist.toFixed(1)}px ` +
             `from expected (${expectedMidX}, ${expectedMidY}); tolerance is ${MIDPOINT_TOLERANCE_PX}px`,
         ).toBeLessThanOrEqual(MIDPOINT_TOLERANCE_PX);
 
         // Also verify the anchor references the correct node IDs.
-        expect(anchor!.sourceNodeId).toBe(START_NODE_ID);
-        expect(anchor!.targetNodeId).toBe(newNodeId);
+        expect(anchor?.sourceNodeId).toBe(START_NODE_ID);
+        expect(anchor?.targetNodeId).toBe(newNodeId);
       });
 
       it("edge anchor midpoint for second edge is within 12px tolerance", () => {
@@ -351,7 +351,7 @@ describe("Insertion renderer matrix", () => {
         const secondEdge = updatedGraph.edges.find((e) => e.target === END_NODE_ID);
         expect(secondEdge, "edge from new node to end must exist").toBeDefined();
 
-        const anchor = stub.getEdgeAnchor(updatedGraph, secondEdge!.id);
+        const anchor = stub.getEdgeAnchor(updatedGraph, secondEdge?.id);
         expect(anchor, "getEdgeAnchor must return an anchor").not.toBeNull();
 
         const newNodeIndex = updatedGraph.nodes.findIndex((n) => n.id === newNodeId);
@@ -359,14 +359,14 @@ describe("Insertion renderer matrix", () => {
         const expectedMidX = (newNodeIndex * NODE_H_GAP + endIndex * NODE_H_GAP) / 2;
         const expectedMidY = 0;
 
-        const dist = distance(anchor!.x, anchor!.y, expectedMidX, expectedMidY);
+        const dist = distance(anchor?.x, anchor?.y, expectedMidX, expectedMidY);
         expect(
           dist,
           `Edge anchor midpoint distance ${dist.toFixed(1)}px exceeds ${MIDPOINT_TOLERANCE_PX}px tolerance`,
         ).toBeLessThanOrEqual(MIDPOINT_TOLERANCE_PX);
 
-        expect(anchor!.sourceNodeId).toBe(newNodeId);
-        expect(anchor!.targetNodeId).toBe(END_NODE_ID);
+        expect(anchor?.sourceNodeId).toBe(newNodeId);
+        expect(anchor?.targetNodeId).toBe(END_NODE_ID);
       });
 
       it("focus lands on the newly inserted node", () => {
@@ -384,8 +384,8 @@ describe("Insertion renderer matrix", () => {
         stub.focusNode({ nodeId: newNodeId, behavior: "center" });
 
         expect(stub.lastFocusTarget, "focusNode must have been called").not.toBeNull();
-        expect(stub.lastFocusTarget!.nodeId).toBe(newNodeId);
-        expect(stub.lastFocusTarget!.behavior).toBe("center");
+        expect(stub.lastFocusTarget?.nodeId).toBe(newNodeId);
+        expect(stub.lastFocusTarget?.behavior).toBe("center");
       });
 
       it("focus with ensure-visible behavior targets the correct node", () => {
@@ -399,8 +399,8 @@ describe("Insertion renderer matrix", () => {
         stub.focusNode({ nodeId: newNodeId, behavior: "ensure-visible" });
 
         expect(stub.lastFocusTarget).not.toBeNull();
-        expect(stub.lastFocusTarget!.nodeId).toBe(newNodeId);
-        expect(stub.lastFocusTarget!.behavior).toBe("ensure-visible");
+        expect(stub.lastFocusTarget?.nodeId).toBe(newNodeId);
+        expect(stub.lastFocusTarget?.behavior).toBe("ensure-visible");
       });
 
       it("getEdgeAnchor returns null for a non-existent edge", () => {
@@ -430,7 +430,7 @@ describe("Insertion renderer matrix", () => {
         expect(edgeToEnd).toBeDefined();
 
         const second = insertTask(first.graph, counter, {
-          edgeId: edgeToEnd!.id,
+          edgeId: edgeToEnd?.id,
           taskReference: "task2",
         });
 
@@ -448,7 +448,7 @@ describe("Insertion renderer matrix", () => {
           const expectedX = (srcIdx * NODE_H_GAP + tgtIdx * NODE_H_GAP) / 2;
           const expectedY = 0;
 
-          const dist = distance(anchor!.x, anchor!.y, expectedX, expectedY);
+          const dist = distance(anchor?.x, anchor?.y, expectedX, expectedY);
           expect(dist, `Edge ${edge.id} anchor midpoint exceeds tolerance`).toBeLessThanOrEqual(
             MIDPOINT_TOLERANCE_PX,
           );
@@ -456,7 +456,7 @@ describe("Insertion renderer matrix", () => {
 
         // Focus should target the second inserted node.
         stub.focusNode({ nodeId: second.nodeId, behavior: "center" });
-        expect(stub.lastFocusTarget!.nodeId).toBe(second.nodeId);
+        expect(stub.lastFocusTarget?.nodeId).toBe(second.nodeId);
       });
     });
   }
