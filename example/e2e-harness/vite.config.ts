@@ -18,6 +18,14 @@ export default defineConfig({
         replacement: resolve(__dirname, "../../packages/editor-host-client/src/rete-lit.ts"),
       },
       {
+        find: "@sw-editor/editor-host-client/react-flow",
+        replacement: resolve(__dirname, "../../packages/editor-host-client/src/react-flow.ts"),
+      },
+      {
+        find: "@sw-editor/editor-renderer-react-flow",
+        replacement: resolve(__dirname, "../../packages/editor-renderer-react-flow/src/index.ts"),
+      },
+      {
         find: "@sw-editor/editor-host-client",
         replacement: resolve(__dirname, "../../packages/editor-host-client/src/index.ts"),
       },
