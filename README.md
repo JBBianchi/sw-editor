@@ -79,7 +79,7 @@ Additional scripts available at the root:
 
 ## Spec Kit Workflow
 
-This repository uses [GitHub Spec Kit](https://github.com/JBBianchi/sw-editor) feature packages to keep requirements, technical plans, and implementation tasks synchronized.
+This repository uses the Spec Kit feature package workflow to keep requirements, technical plans, and implementation tasks synchronized.
 
 All feature work follows a structured lifecycle:
 
