@@ -239,6 +239,90 @@ describe("insertTask — multiple insertions maintain connectivity", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Insertion ordering — node array reflects logical workflow order
+// ---------------------------------------------------------------------------
+
+describe("insertTask — node array ordering (regression)", () => {
+  it("insert between start and end → new node is at index 1", () => {
+    const graph = bootstrapWorkflowGraph();
+    const counter = new RevisionCounter();
+    const result = insertTask(graph, counter, { edgeId: INITIAL_EDGE_ID });
+
+    const nodeIds = result.graph.nodes.map((n) => n.id);
+    // Expected logical order: [start, newTask, end]
+    expect(nodeIds.indexOf(START_NODE_ID)).toBe(0);
+    expect(nodeIds.indexOf(result.nodeId)).toBe(1);
+    expect(nodeIds.indexOf(END_NODE_ID)).toBe(2);
+  });
+
+  it("insert between A and B in a linear chain → new node appears between A and B", () => {
+    const counter = new RevisionCounter();
+    let graph = bootstrapWorkflowGraph();
+
+    // Build chain: start → A → end
+    const insertA = insertTask(graph, counter, { edgeId: INITIAL_EDGE_ID });
+    graph = insertA.graph;
+
+    // Find edge A → end, insert B after A: start → A → B → end
+    // biome-ignore lint/style/noNonNullAssertion: edge guaranteed after insertTask
+    const edgeAToEnd = graph.edges.find(
+      (e) => e.source === insertA.nodeId && e.target === END_NODE_ID,
+    )!;
+    const insertB = insertTask(graph, counter, { edgeId: edgeAToEnd.id });
+    graph = insertB.graph;
+
+    // Now insert C between A and B by splitting edge A → B
+    // biome-ignore lint/style/noNonNullAssertion: edge guaranteed after insertTask
+    const edgeAToB = graph.edges.find(
+      (e) => e.source === insertA.nodeId && e.target === insertB.nodeId,
+    )!;
+    const insertC = insertTask(graph, counter, { edgeId: edgeAToB.id });
+    graph = insertC.graph;
+
+    const nodeIds = graph.nodes.map((n) => n.id);
+    // Expected logical order: [start, A, C, B, end]
+    const idxA = nodeIds.indexOf(insertA.nodeId);
+    const idxC = nodeIds.indexOf(insertC.nodeId);
+    const idxB = nodeIds.indexOf(insertB.nodeId);
+    expect(idxA).toBeLessThan(idxC);
+    expect(idxC).toBeLessThan(idxB);
+  });
+
+  it("insert at multiple positions → each new node is spliced at the correct index", () => {
+    const counter = new RevisionCounter();
+    let graph = bootstrapWorkflowGraph();
+
+    // Insert first: start → T1 → end
+    const t1 = insertTask(graph, counter, { edgeId: INITIAL_EDGE_ID });
+    graph = t1.graph;
+
+    // Insert second after T1: start → T1 → T2 → end
+    // biome-ignore lint/style/noNonNullAssertion: edge guaranteed after insertTask
+    const edgeT1ToEnd = graph.edges.find(
+      (e) => e.source === t1.nodeId && e.target === END_NODE_ID,
+    )!;
+    const t2 = insertTask(graph, counter, { edgeId: edgeT1ToEnd.id });
+    graph = t2.graph;
+
+    // Insert third between start and T1: start → T3 → T1 → T2 → end
+    // biome-ignore lint/style/noNonNullAssertion: edge guaranteed after insertTask
+    const edgeStartToT1 = graph.edges.find(
+      (e) => e.source === START_NODE_ID && e.target === t1.nodeId,
+    )!;
+    const t3 = insertTask(graph, counter, { edgeId: edgeStartToT1.id });
+    graph = t3.graph;
+
+    const nodeIds = graph.nodes.map((n) => n.id);
+    // Expected logical order: [start, T3, T1, T2, end]
+    expect(nodeIds[0]).toBe(START_NODE_ID);
+    expect(nodeIds[1]).toBe(t3.nodeId);
+    expect(nodeIds[2]).toBe(t1.nodeId);
+    expect(nodeIds[3]).toBe(t2.nodeId);
+    expect(nodeIds[4]).toBe(END_NODE_ID);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Edge cases and error handling
 // ---------------------------------------------------------------------------
 
