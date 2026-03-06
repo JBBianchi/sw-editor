@@ -166,6 +166,9 @@ importers:
         specifier: workspace:*
         version: link:../editor-host-client
     devDependencies:
+      '@sw-editor/editor-renderer-contract':
+        specifier: workspace:*
+        version: link:../editor-renderer-contract
       happy-dom:
         specifier: ^20.8.3
         version: 20.8.3
