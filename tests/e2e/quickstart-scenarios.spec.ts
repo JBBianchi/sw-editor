@@ -153,24 +153,83 @@ test.describe.fixme("Quickstart Scenario 2: Insert And Edit Task", () => {
 // Scenario 3: Load Existing YAML
 // ---------------------------------------------------------------------------
 
-test.describe.fixme("Quickstart Scenario 3: Load Existing YAML", () => {
-  test("loads a valid YAML workflow and renders the graph", async ({ page }) => {
+/**
+ * Inline YAML fixture matching `tests/fixtures/valid/simple.yaml`.
+ *
+ * Contains one top-level task (`fetchUser`), so the projected graph has
+ * three nodes: start, fetchUser (task), end.
+ */
+const SIMPLE_YAML_FIXTURE = `\
+document:
+  dsl: '1.0.0'
+  namespace: fixtures
+  name: simple-http-call
+  version: '1.0.0'
+input:
+  schema:
+    format: json
+    document:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          description: The ID of the user to fetch
+do:
+  - fetchUser:
+      call: http
+      with:
+        method: get
+        endpoint: https://api.example.com/users/{userId}
+`;
+
+/** Expected node count after loading {@link SIMPLE_YAML_FIXTURE}: start + fetchUser + end. */
+const SIMPLE_YAML_NODE_COUNT = 3;
+
+/**
+ * Loads a YAML workflow string into the editor via the demo harness textarea
+ * and load button, then waits for the `data-node-count` attribute to reflect
+ * the expected graph size.
+ *
+ * @param page - The Playwright {@link Page} object.
+ * @param yaml - The YAML source to load.
+ * @param expectedNodeCount - The graph node count to wait for.
+ */
+async function loadYaml(page: Page, yaml: string, expectedNodeCount: number): Promise<void> {
+  const yamlArea = page.locator('textarea[aria-label="YAML source"]');
+  await yamlArea.fill(yaml);
+
+  const loadBtn = page.locator('button[aria-label="Load workflow"]');
+  await loadBtn.click();
+
+  // Wait for the element to reflect the projected node count.
+  await expect(page.locator(EDITOR_ELEMENT)).toHaveAttribute(
+    "data-node-count",
+    String(expectedNodeCount),
+  );
+}
+
+test.describe("Quickstart Scenario 3: Load Existing YAML", () => {
+  test("load workflow button is present in the demo harness", async ({ page }) => {
     await openEditor(page);
 
-    // Trigger load via the editor API or a file-input affordance.
     const loadBtn = page.locator('button[aria-label="Load workflow"]');
     await expect(loadBtn).toBeVisible();
   });
 
-  test("graph structure matches the loaded YAML", async ({ page }) => {
+  test("loads a valid YAML workflow and graph reflects correct node count", async ({ page }) => {
     await openEditor(page);
+    await loadYaml(page, SIMPLE_YAML_FIXTURE, SIMPLE_YAML_NODE_COUNT);
 
-    // After loading, start and end nodes from the YAML should be present.
-    await expect(page.locator('[data-node-type="start"]')).toBeVisible();
-    await expect(page.locator('[data-node-type="end"]')).toBeVisible();
+    // After loading simple.yaml (1 task), the editor graph has 3 nodes.
+    await expect(page.locator(EDITOR_ELEMENT)).toHaveAttribute(
+      "data-node-count",
+      String(SIMPLE_YAML_NODE_COUNT),
+    );
   });
 
-  test("exporting after a small edit produces valid YAML", async ({ page }) => {
+  test.fixme("exporting after a small edit produces valid YAML", async ({ page }) => {
     await openEditor(page);
 
     const exportBtn = page.locator(EXPORT_BUTTON_SELECTOR);
