@@ -11,6 +11,7 @@ This repository now uses GitHub Spec Kit feature packages under `specs/`.
 | [`003-branching-control-flow`](003-branching-control-flow/) | Planned | Panel-driven authoring for transition, if, switch, fork, and try-catch behavior with route projection. |
 | [`004-extensibility-customization`](004-extensibility-customization/) | Planned | Plugin architecture for custom rendering, validation, commands, and slot-based UI extensions. |
 | [`005-align-example-demo`](005-align-example-demo/) | Implemented | Consolidate `demo/` into `example/e2e-harness/` with package `@sw-editor/example-e2e-harness` under the unified `example/` top-level directory. |
+| [`006-fix-insert-layout`](006-fix-insert-layout/) | Draft | Correct insertion affordance placement on edges and keep newly inserted nodes visually positioned between their intended neighbors. |
 
 Each feature package contains:
 
