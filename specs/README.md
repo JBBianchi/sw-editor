@@ -12,6 +12,7 @@ This repository now uses GitHub Spec Kit feature packages under `specs/`.
 | [`004-extensibility-customization`](004-extensibility-customization/) | Planned | Plugin architecture for custom rendering, validation, commands, and slot-based UI extensions. |
 | [`005-align-example-demo`](005-align-example-demo/) | Implemented | Consolidate `demo/` into `example/e2e-harness/` with package `@sw-editor/example-e2e-harness` under the unified `example/` top-level directory. |
 | [`006-fix-insert-layout`](006-fix-insert-layout/) | Draft | Correct insertion affordance placement on edges and keep newly inserted nodes visually positioned between their intended neighbors. |
+| [`007-storybook`](007-storybook/) | Implemented | Integrate Storybook so that all editor components can be displayed, documented, and validated in isolation across React, vanilla DOM, and Lit renderers. |
 
 Each feature package contains:
 
