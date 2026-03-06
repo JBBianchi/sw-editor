@@ -357,6 +357,168 @@ describe("InsertionUI", () => {
     });
   });
 
+  describe("sequential insertion", () => {
+    it("inserting twice produces two new edges with affordance buttons", async () => {
+      const { ui, container, eventTarget, graph } = makeHarness();
+
+      // --- First insertion on the initial edge ---
+      ui.activateInsertion(INITIAL_EDGE_ID);
+      const firstChanged = captureEvent<WorkflowChangedPayload>(
+        eventTarget,
+        EditorEventName.workflowChanged,
+      );
+      // biome-ignore lint/style/noNonNullAssertion: activateInsertion always renders menu items
+      container.querySelector<HTMLButtonElement>("[role='menuitem']")!.click();
+      await firstChanged;
+
+      // After the first insertion the original edge (__start__->__end__) is gone
+      // and replaced by two new edges: __start__->task and task->__end__.
+      const graphAfterFirst = ui["graph"];
+      expect(graphAfterFirst.edges.length).toBe(2);
+
+      // Attach affordances for the two new edges.
+      const anchor1 = document.createElement("div");
+      const anchor2 = document.createElement("div");
+      const [edge1, edge2] = graphAfterFirst.edges;
+      ui.attachToEdge(edge1.id, anchor1);
+      ui.attachToEdge(edge2.id, anchor2);
+
+      expect(anchor1.querySelector("button.sw-insertion-affordance")).not.toBeNull();
+      expect(anchor2.querySelector("button.sw-insertion-affordance")).not.toBeNull();
+
+      // --- Second insertion on the first of the two new edges ---
+      ui.activateInsertion(edge1.id);
+      const secondChanged = captureEvent<WorkflowChangedPayload>(
+        eventTarget,
+        EditorEventName.workflowChanged,
+      );
+      // biome-ignore lint/style/noNonNullAssertion: activateInsertion always renders menu items
+      container.querySelector<HTMLButtonElement>("[role='menuitem']")!.click();
+      await secondChanged;
+
+      // After the second insertion, graph should have 3 edges total
+      // (edge1 was split into 2, plus edge2 is still present).
+      const graphAfterSecond = ui["graph"];
+      expect(graphAfterSecond.edges.length).toBe(3);
+      // And the original edge1 should no longer exist.
+      expect(graphAfterSecond.edges.find((e) => e.id === edge1.id)).toBeUndefined();
+    });
+
+    it("anchor positions update correctly after each sequential insertion", async () => {
+      let callCount = 0;
+      const adapter = makeMockRendererAdapter(null);
+      // Return distinct anchor coordinates for each call so we can verify recalculation.
+      adapter.getEdgeAnchor.mockImplementation((edgeId: string) => {
+        callCount++;
+        return { edgeId, sourceNodeId: "s", targetNodeId: "t", x: callCount * 100, y: callCount * 50 };
+      });
+
+      const { ui, container, eventTarget } = makeHarnessWithAdapter(adapter);
+
+      // --- First insertion ---
+      ui.activateInsertion(INITIAL_EDGE_ID);
+      const firstChanged = captureEvent<WorkflowChangedPayload>(
+        eventTarget,
+        EditorEventName.workflowChanged,
+      );
+      // biome-ignore lint/style/noNonNullAssertion: activateInsertion always renders menu items
+      container.querySelector<HTMLButtonElement>("[role='menuitem']")!.click();
+      await firstChanged;
+
+      const graphAfterFirst = ui["graph"];
+      const [edgeA, edgeB] = graphAfterFirst.edges;
+
+      // Reset call count to track fresh anchor queries.
+      adapter.getEdgeAnchor.mockClear();
+      callCount = 0;
+
+      // Attach affordances to the two new edges — each triggers getEdgeAnchor.
+      const anchorA = document.createElement("div");
+      const anchorB = document.createElement("div");
+      ui.attachToEdge(edgeA.id, anchorA);
+      ui.attachToEdge(edgeB.id, anchorB);
+
+      expect(adapter.getEdgeAnchor).toHaveBeenCalledTimes(2);
+      expect(adapter.getEdgeAnchor).toHaveBeenCalledWith(edgeA.id);
+      expect(adapter.getEdgeAnchor).toHaveBeenCalledWith(edgeB.id);
+
+      const btnA = anchorA.querySelector<HTMLButtonElement>("button.sw-insertion-affordance");
+      const btnB = anchorB.querySelector<HTMLButtonElement>("button.sw-insertion-affordance");
+      expect(btnA?.style.left).toBe("100px");
+      expect(btnA?.style.top).toBe("50px");
+      expect(btnB?.style.left).toBe("200px");
+      expect(btnB?.style.top).toBe("100px");
+
+      // --- Second insertion splits edgeA ---
+      ui.activateInsertion(edgeA.id);
+      const secondChanged = captureEvent<WorkflowChangedPayload>(
+        eventTarget,
+        EditorEventName.workflowChanged,
+      );
+      // biome-ignore lint/style/noNonNullAssertion: activateInsertion always renders menu items
+      container.querySelector<HTMLButtonElement>("[role='menuitem']")!.click();
+      await secondChanged;
+
+      const graphAfterSecond = ui["graph"];
+      adapter.getEdgeAnchor.mockClear();
+      callCount = 0;
+
+      // Attach affordances for the new edges replacing edgeA.
+      const newEdges = graphAfterSecond.edges.filter((e) => e.id !== edgeB.id);
+      expect(newEdges.length).toBe(2);
+      for (const edge of newEdges) {
+        const el = document.createElement("div");
+        ui.attachToEdge(edge.id, el);
+      }
+
+      // getEdgeAnchor was called for each new edge — no stale edgeA queries.
+      expect(adapter.getEdgeAnchor).toHaveBeenCalledTimes(2);
+      for (const edge of newEdges) {
+        expect(adapter.getEdgeAnchor).toHaveBeenCalledWith(edge.id);
+      }
+      expect(adapter.getEdgeAnchor).not.toHaveBeenCalledWith(edgeA.id);
+    });
+
+    it("no stale affordances remain after re-attaching edges post-insertion", async () => {
+      const { ui, container, eventTarget } = makeHarness();
+
+      // Attach affordance to the initial edge.
+      const initialAnchor = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, initialAnchor);
+      expect(initialAnchor.querySelector("button.sw-insertion-affordance")).not.toBeNull();
+
+      // Insert a task on the initial edge.
+      ui.activateInsertion(INITIAL_EDGE_ID);
+      const changed = captureEvent<WorkflowChangedPayload>(
+        eventTarget,
+        EditorEventName.workflowChanged,
+      );
+      // biome-ignore lint/style/noNonNullAssertion: activateInsertion always renders menu items
+      container.querySelector<HTMLButtonElement>("[role='menuitem']")!.click();
+      await changed;
+
+      // Detach the now-stale initial edge affordance (simulating renderer cleanup).
+      ui.attachToEdge(INITIAL_EDGE_ID, document.createElement("div"));
+
+      // The internal affordance map should no longer reference the old anchor's button.
+      expect(initialAnchor.querySelector("button.sw-insertion-affordance")).toBeNull();
+
+      // Attach the two new edges.
+      const graphAfter = ui["graph"];
+      const anchors = graphAfter.edges.map((edge) => {
+        const el = document.createElement("div");
+        ui.attachToEdge(edge.id, el);
+        return el;
+      });
+
+      // Exactly 2 affordance buttons exist — one per new edge, none stale.
+      const allAffordances = anchors.flatMap((a) =>
+        Array.from(a.querySelectorAll("button.sw-insertion-affordance")),
+      );
+      expect(allAffordances.length).toBe(2);
+    });
+  });
+
   describe("renderer-anchor attachment", () => {
     it("positions the affordance button using RendererEdgeAnchor coordinates", () => {
       const anchor: RendererEdgeAnchor = {
