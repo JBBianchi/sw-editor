@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { END_NODE_ID, START_NODE_ID, projectWorkflowToGraph } from "../../src/graph/index.js";
 import type { WorkflowGraph } from "../../src/graph/index.js";
+import { END_NODE_ID, projectWorkflowToGraph, START_NODE_ID } from "../../src/graph/index.js";
 import { parseWorkflowSource } from "../../src/source/index.js";
 
 // ---------------------------------------------------------------------------
@@ -19,7 +19,10 @@ const BASE_DOCUMENT = {
  * Throws if parsing fails (tests should use valid definitions).
  */
 function projectFromJson(doTasks: unknown[]): WorkflowGraph {
-  const source = { format: "json" as const, content: JSON.stringify({ document: BASE_DOCUMENT, do: doTasks }) };
+  const source = {
+    format: "json" as const,
+    content: JSON.stringify({ document: BASE_DOCUMENT, do: doTasks }),
+  };
   const result = parseWorkflowSource(source);
   if (!result.ok) {
     throw new Error(`Parse failed: ${result.diagnostics.map((d) => d.message).join("; ")}`);
@@ -76,7 +79,10 @@ describe("projectWorkflowToGraph — empty / no-task workflow", () => {
     // a no-task projection without violating SDK schema validation.
     const source = {
       format: "json" as const,
-      content: JSON.stringify({ document: BASE_DOCUMENT, do: [{ placeholder: { set: { x: 1 } } }] }),
+      content: JSON.stringify({
+        document: BASE_DOCUMENT,
+        do: [{ placeholder: { set: { x: 1 } } }],
+      }),
     };
     const result = parseWorkflowSource(source);
     expect(result.ok).toBe(true);
@@ -97,7 +103,10 @@ describe("projectWorkflowToGraph — empty / no-task workflow", () => {
   it("empty graph is connected", () => {
     const source = {
       format: "json" as const,
-      content: JSON.stringify({ document: BASE_DOCUMENT, do: [{ placeholder: { set: { x: 1 } } }] }),
+      content: JSON.stringify({
+        document: BASE_DOCUMENT,
+        do: [{ placeholder: { set: { x: 1 } } }],
+      }),
     };
     const result = parseWorkflowSource(source);
     expect(result.ok).toBe(true);
@@ -202,6 +211,7 @@ describe("projectWorkflowToGraph — sequential multi-task (linear chain)", () =
 describe("projectWorkflowToGraph — then: 'end' directive", () => {
   it("connects task directly to __end__ when then is 'end'", () => {
     const graph = projectFromJson([
+      // biome-ignore lint/suspicious/noThenProperty: 'then' is a Serverless Workflow DSL flow directive, not Promise.then
       { step1: { set: { x: 1 }, then: "end" } },
       { step2: { set: { y: 2 } } },
     ]);
@@ -212,6 +222,7 @@ describe("projectWorkflowToGraph — then: 'end' directive", () => {
 
   it("graph is connected when then: 'end' is used", () => {
     const graph = projectFromJson([
+      // biome-ignore lint/suspicious/noThenProperty: 'then' is a Serverless Workflow DSL flow directive, not Promise.then
       { step1: { set: { x: 1 }, then: "end" } },
       { step2: { set: { y: 2 } } },
     ]);
@@ -226,6 +237,7 @@ describe("projectWorkflowToGraph — then: 'end' directive", () => {
 describe("projectWorkflowToGraph — then: 'exit' directive", () => {
   it("connects task directly to __end__ when then is 'exit'", () => {
     const graph = projectFromJson([
+      // biome-ignore lint/suspicious/noThenProperty: 'then' is a Serverless Workflow DSL flow directive, not Promise.then
       { step1: { set: { x: 1 }, then: "exit" } },
       { step2: { set: { y: 2 } } },
     ]);
@@ -241,6 +253,7 @@ describe("projectWorkflowToGraph — then: 'exit' directive", () => {
 describe("projectWorkflowToGraph — then: 'continue' directive (explicit)", () => {
   it("advances to the next task when then is 'continue'", () => {
     const graph = projectFromJson([
+      // biome-ignore lint/suspicious/noThenProperty: 'then' is a Serverless Workflow DSL flow directive, not Promise.then
       { step1: { set: { x: 1 }, then: "continue" } },
       { step2: { set: { y: 2 } } },
     ]);
@@ -249,9 +262,8 @@ describe("projectWorkflowToGraph — then: 'continue' directive (explicit)", () 
   });
 
   it("last task with then: 'continue' connects to __end__", () => {
-    const graph = projectFromJson([
-      { step1: { set: { x: 1 }, then: "continue" } },
-    ]);
+    // biome-ignore lint/suspicious/noThenProperty: 'then' is a Serverless Workflow DSL flow directive, not Promise.then
+    const graph = projectFromJson([{ step1: { set: { x: 1 }, then: "continue" } }]);
 
     expect(successors(graph, "step1")).toEqual([END_NODE_ID]);
   });
@@ -264,6 +276,7 @@ describe("projectWorkflowToGraph — then: 'continue' directive (explicit)", () 
 describe("projectWorkflowToGraph — named task transition", () => {
   it("creates an edge to the named task when then references a valid task name", () => {
     const graph = projectFromJson([
+      // biome-ignore lint/suspicious/noThenProperty: 'then' is a Serverless Workflow DSL flow directive, not Promise.then
       { step1: { set: { x: 1 }, then: "step3" } },
       { step2: { set: { y: 2 } } },
       { step3: { set: { z: 3 } } },
@@ -274,15 +287,15 @@ describe("projectWorkflowToGraph — named task transition", () => {
   });
 
   it("falls back to __end__ for unknown named task reference", () => {
-    const graph = projectFromJson([
-      { step1: { set: { x: 1 }, then: "nonExistentStep" } },
-    ]);
+    // biome-ignore lint/suspicious/noThenProperty: 'then' is a Serverless Workflow DSL flow directive, not Promise.then
+    const graph = projectFromJson([{ step1: { set: { x: 1 }, then: "nonExistentStep" } }]);
 
     expect(successors(graph, "step1")).toEqual([END_NODE_ID]);
   });
 
   it("graph is connected with named transitions", () => {
     const graph = projectFromJson([
+      // biome-ignore lint/suspicious/noThenProperty: 'then' is a Serverless Workflow DSL flow directive, not Promise.then
       { step1: { set: { x: 1 }, then: "step3" } },
       { step2: { set: { y: 2 } } },
       { step3: { set: { z: 3 } } },
@@ -323,7 +336,10 @@ describe("projectWorkflowToGraph — node ordering", () => {
 
 describe("projectWorkflowToGraph — return value", () => {
   it("returns a fresh graph object on each call", () => {
-    const source = { format: "json" as const, content: JSON.stringify({ document: BASE_DOCUMENT, do: [{ s: { set: {} } }] }) };
+    const source = {
+      format: "json" as const,
+      content: JSON.stringify({ document: BASE_DOCUMENT, do: [{ s: { set: {} } }] }),
+    };
     const result = parseWorkflowSource(source);
     if (!result.ok) return;
     const a = projectWorkflowToGraph(result.workflow);

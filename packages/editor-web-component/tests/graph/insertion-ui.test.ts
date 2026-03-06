@@ -1,31 +1,21 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, vi } from "vitest";
-import {
-  InsertionUI,
-  MVP_TASK_TYPES,
-} from "../../src/graph/insertion-ui.js";
-import type {
-  FocusNodeCallback,
-  SerializeGraphCallback,
-  TaskTypeDescriptor,
-} from "../../src/graph/insertion-ui.js";
-import { EventBridge } from "../../src/events/index.js";
-import { bootstrapWorkflowGraph, INITIAL_EDGE_ID, RevisionCounter } from "@sw-editor/editor-core";
+
 import type { WorkflowGraph } from "@sw-editor/editor-core";
-import { EditorEventName } from "@sw-editor/editor-host-client";
+import { bootstrapWorkflowGraph, INITIAL_EDGE_ID, RevisionCounter } from "@sw-editor/editor-core";
 import type {
   EditorSelectionChangedPayload,
   WorkflowChangedPayload,
 } from "@sw-editor/editor-host-client";
+import { EditorEventName } from "@sw-editor/editor-host-client";
+import { describe, expect, it, vi } from "vitest";
+import { EventBridge } from "../../src/events/index.js";
+import type { FocusNodeCallback, SerializeGraphCallback } from "../../src/graph/insertion-ui.js";
+import { InsertionUI, MVP_TASK_TYPES } from "../../src/graph/insertion-ui.js";
 
 /** Captures the next CustomEvent of `name` on `target` and returns its detail. */
 function captureEvent<T>(target: EventTarget, name: string): Promise<T> {
   return new Promise<T>((resolve) => {
-    target.addEventListener(
-      name,
-      (e) => resolve((e as CustomEvent<T>).detail),
-      { once: true },
-    );
+    target.addEventListener(name, (e) => resolve((e as CustomEvent<T>).detail), { once: true });
   });
 }
 
@@ -64,7 +54,18 @@ describe("MVP_TASK_TYPES", () => {
 
   it("includes the core Serverless Workflow task kinds", () => {
     const ids = MVP_TASK_TYPES.map((t) => t.id);
-    for (const kind of ["call", "do", "fork", "emit", "listen", "run", "set", "switch", "try", "wait"]) {
+    for (const kind of [
+      "call",
+      "do",
+      "fork",
+      "emit",
+      "listen",
+      "run",
+      "set",
+      "switch",
+      "try",
+      "wait",
+    ]) {
       expect(ids).toContain(kind);
     }
   });
@@ -142,6 +143,7 @@ describe("InsertionUI", () => {
       const anchor = document.createElement("div");
       ui.attachToEdge(INITIAL_EDGE_ID, anchor);
 
+      // biome-ignore lint/style/noNonNullAssertion: attachToEdge always renders the affordance button
       const button = anchor.querySelector<HTMLButtonElement>("button.sw-insertion-affordance")!;
       button.click();
 
@@ -168,6 +170,7 @@ describe("InsertionUI", () => {
         EditorEventName.workflowChanged,
       );
 
+      // biome-ignore lint/style/noNonNullAssertion: activateInsertion always renders menu items
       const firstItem = container.querySelector<HTMLButtonElement>("[role='menuitem']")!;
       firstItem.click();
 
@@ -184,6 +187,7 @@ describe("InsertionUI", () => {
         EditorEventName.editorSelectionChanged,
       );
 
+      // biome-ignore lint/style/noNonNullAssertion: activateInsertion always renders menu items
       const firstItem = container.querySelector<HTMLButtonElement>("[role='menuitem']")!;
       firstItem.click();
 
@@ -196,6 +200,7 @@ describe("InsertionUI", () => {
       const { ui, container } = makeHarness(focusSpy);
       ui.activateInsertion(INITIAL_EDGE_ID);
 
+      // biome-ignore lint/style/noNonNullAssertion: activateInsertion always renders menu items
       const firstItem = container.querySelector<HTMLButtonElement>("[role='menuitem']")!;
       firstItem.click();
 
@@ -210,6 +215,7 @@ describe("InsertionUI", () => {
       const { ui, container } = makeHarness();
       ui.activateInsertion(INITIAL_EDGE_ID);
 
+      // biome-ignore lint/style/noNonNullAssertion: activateInsertion always renders menu items
       const firstItem = container.querySelector<HTMLButtonElement>("[role='menuitem']")!;
       firstItem.click();
 
@@ -238,9 +244,11 @@ describe("InsertionUI", () => {
       document.body.appendChild(anchor);
       ui.attachToEdge(INITIAL_EDGE_ID, anchor);
 
+      // biome-ignore lint/style/noNonNullAssertion: attachToEdge always renders the affordance button
       const affordance = anchor.querySelector<HTMLButtonElement>("button.sw-insertion-affordance")!;
       affordance.click();
 
+      // biome-ignore lint/style/noNonNullAssertion: affordance click always renders menu items
       const firstItem = container.querySelector<HTMLButtonElement>("[role='menuitem']")!;
       firstItem.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 
@@ -256,6 +264,7 @@ describe("InsertionUI", () => {
 
       // First insertion.
       ui.activateInsertion(INITIAL_EDGE_ID);
+      // biome-ignore lint/style/noNonNullAssertion: activateInsertion always renders menu items
       const firstItem = container.querySelector<HTMLButtonElement>("[role='menuitem']")!;
 
       const changedPromise = captureEvent<WorkflowChangedPayload>(
@@ -270,7 +279,9 @@ describe("InsertionUI", () => {
       // We verify this indirectly: a second insertion on the same original
       // edge should now fail silently (edge was split), i.e. no workflowChanged.
       const secondChangedFired = vi.fn();
-      eventTarget.addEventListener(EditorEventName.workflowChanged, secondChangedFired, { once: true });
+      eventTarget.addEventListener(EditorEventName.workflowChanged, secondChangedFired, {
+        once: true,
+      });
 
       ui.activateInsertion(INITIAL_EDGE_ID);
       const secondItem = container.querySelector<HTMLButtonElement>("[role='menuitem']");

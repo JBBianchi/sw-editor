@@ -23,16 +23,13 @@
  * @module
  */
 
-import { describe, expect, it } from "vitest";
+import type { DiagnosticsCollection, ValidationDiagnostic } from "@sw-editor/editor-core";
 import type {
-  EditorDiagnosticsChangedPayload,
   BaseEventPayload,
+  EditorDiagnosticsChangedPayload,
 } from "@sw-editor/editor-host-client";
 import { CONTRACT_VERSION, EditorEventName } from "@sw-editor/editor-host-client";
-import type {
-  DiagnosticsCollection,
-  ValidationDiagnostic,
-} from "@sw-editor/editor-core";
+import { describe, expect, it } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -54,18 +51,18 @@ function assertDiagnosticEntry(entry: unknown): void {
   const d = entry as Record<string, unknown>;
 
   // ruleId: non-empty string identifier for the validation rule.
-  expect(typeof d["ruleId"]).toBe("string");
-  expect((d["ruleId"] as string).length).toBeGreaterThan(0);
+  expect(typeof d.ruleId).toBe("string");
+  expect((d.ruleId as string).length).toBeGreaterThan(0);
 
   // severity: discriminated union of known string literals.
-  expect(VALID_SEVERITIES).toContain(d["severity"]);
+  expect(VALID_SEVERITIES).toContain(d.severity);
 
   // message: human-readable description — must be a string.
-  expect(typeof d["message"]).toBe("string");
+  expect(typeof d.message).toBe("string");
 
   // location: path reference — must be a string (may be empty for unmappable
   // positions; consumers must handle the empty-string case as a fallback).
-  expect(typeof d["location"]).toBe("string");
+  expect(typeof d.location).toBe("string");
 }
 
 /**
@@ -81,17 +78,17 @@ function assertDiagnosticsPayload(payload: unknown): void {
 
   // --- BaseEventPayload fields ---
   // version: SemVer string of the emitting bundle.
-  expect(typeof p["version"]).toBe("string");
-  expect((p["version"] as string).length).toBeGreaterThan(0);
+  expect(typeof p.version).toBe("string");
+  expect((p.version as string).length).toBeGreaterThan(0);
 
   // revision: monotonically increasing positive integer.
-  expect(typeof p["revision"]).toBe("number");
-  expect(Number.isInteger(p["revision"])).toBe(true);
-  expect(p["revision"] as number).toBeGreaterThanOrEqual(1);
+  expect(typeof p.revision).toBe("number");
+  expect(Number.isInteger(p.revision)).toBe(true);
+  expect(p.revision as number).toBeGreaterThanOrEqual(1);
 
   // diagnostics: ordered collection that fully replaces the previous one.
-  expect(Array.isArray(p["diagnostics"])).toBe(true);
-  for (const entry of p["diagnostics"] as unknown[]) {
+  expect(Array.isArray(p.diagnostics)).toBe(true);
+  for (const entry of p.diagnostics as unknown[]) {
     assertDiagnosticEntry(entry);
   }
 }
@@ -169,11 +166,7 @@ describe("EditorDiagnosticsChangedPayload — schema", () => {
   });
 
   it("payload with mixed-severity diagnostics is valid", () => {
-    const payload = makePayload([
-      ERROR_DIAGNOSTIC,
-      WARNING_DIAGNOSTIC,
-      INFO_DIAGNOSTIC,
-    ]);
+    const payload = makePayload([ERROR_DIAGNOSTIC, WARNING_DIAGNOSTIC, INFO_DIAGNOSTIC]);
     assertDiagnosticsPayload(payload);
     expect(payload.diagnostics).toHaveLength(3);
   });
@@ -205,11 +198,7 @@ describe("EditorDiagnosticsChangedPayload — schema", () => {
   });
 
   it("revision increments monotonically across successive payloads", () => {
-    const payloads = [
-      makePayload([], 1),
-      makePayload([ERROR_DIAGNOSTIC], 2),
-      makePayload([], 3),
-    ];
+    const payloads = [makePayload([], 1), makePayload([ERROR_DIAGNOSTIC], 2), makePayload([], 3)];
     for (let i = 1; i < payloads.length; i++) {
       expect(payloads[i].revision).toBeGreaterThan(payloads[i - 1].revision);
     }
@@ -232,9 +221,7 @@ describe("BaseEventPayload — version and revision fields", () => {
   });
 
   it("editorDiagnosticsChanged is the stable event name constant", () => {
-    expect(EditorEventName.editorDiagnosticsChanged).toBe(
-      "editorDiagnosticsChanged",
-    );
+    expect(EditorEventName.editorDiagnosticsChanged).toBe("editorDiagnosticsChanged");
   });
 
   it("revision is present in every payload regardless of diagnostics content", () => {
@@ -269,9 +256,7 @@ describe("Unknown-field tolerance", () => {
     };
 
     // A v1 consumer that only reads the fields it knows about must still work.
-    const knownFieldsConsumer = (
-      p: EditorDiagnosticsChangedPayload,
-    ): boolean => {
+    const knownFieldsConsumer = (p: EditorDiagnosticsChangedPayload): boolean => {
       return (
         typeof p.version === "string" &&
         typeof p.revision === "number" &&
@@ -295,9 +280,7 @@ describe("Unknown-field tolerance", () => {
     };
 
     // A v1 consumer that only reads known fields must still function.
-    const readKnownFields = (
-      d: ValidationDiagnostic,
-    ): { ruleId: string; severity: string } => ({
+    const readKnownFields = (d: ValidationDiagnostic): { ruleId: string; severity: string } => ({
       ruleId: d.ruleId,
       severity: d.severity,
     });
@@ -392,9 +375,9 @@ describe("Unmappable location — fallback behavior", () => {
 
   it("mixed payload with both mappable and unmappable locations is schema-valid", () => {
     const payload = makePayload([
-      ERROR_DIAGNOSTIC,                   // mappable location
-      UNMAPPABLE_LOCATION_DIAGNOSTIC,     // empty location — unmappable
-      WARNING_DIAGNOSTIC,                 // mappable location
+      ERROR_DIAGNOSTIC, // mappable location
+      UNMAPPABLE_LOCATION_DIAGNOSTIC, // empty location — unmappable
+      WARNING_DIAGNOSTIC, // mappable location
     ]);
     assertDiagnosticsPayload(payload);
   });

@@ -61,12 +61,8 @@ vi.mock("rete", () => {
   class Socket {
     constructor(public readonly name: string) {}
   }
-  class Output {
-    constructor(_socket: Socket) {}
-  }
-  class Input {
-    constructor(_socket: Socket) {}
-  }
+  class Output {}
+  class Input {}
   class Node {
     id = `rete-node-${Math.random().toString(36).slice(2)}`;
     addOutput(_key: string, _output: Output): void {}
@@ -74,12 +70,6 @@ vi.mock("rete", () => {
   }
   class Connection {
     id = `rete-conn-${Math.random().toString(36).slice(2)}`;
-    constructor(
-      _source: Node,
-      _sourceOutput: string,
-      _target: Node,
-      _targetInput: string,
-    ) {}
   }
   class NodeEditor {
     use(_plugin: unknown): void {}
@@ -104,22 +94,14 @@ vi.mock("rete-area-plugin", () => {
   }
   class AreaPlugin {
     use(_plugin: unknown): void {}
-    async translate(
-      _id: string,
-      _position: { x: number; y: number },
-    ): Promise<void> {}
+    async translate(_id: string, _position: { x: number; y: number }): Promise<void> {}
     destroy(): void {}
   }
   const AreaExtensions = {
-    selectableNodes: (
-      _area: unknown,
-      _selector: unknown,
-      _opts: unknown,
-    ): void => {},
+    selectableNodes: (_area: unknown, _selector: unknown, _opts: unknown): void => {},
     accumulateOnCtrl: () => ({}),
     simpleNodesOrder: (_area: unknown): void => {},
-    zoomAt: (_area: unknown, _nodes: unknown[]): Promise<void> =>
-      Promise.resolve(),
+    zoomAt: (_area: unknown, _nodes: unknown[]): Promise<void> => Promise.resolve(),
     Selector,
   };
   return { AreaPlugin, AreaExtensions };
@@ -169,36 +151,31 @@ vi.mock("@xyflow/react", () => ({
 // Imports — must follow vi.mock() declarations (hoisted by Vitest).
 // ---------------------------------------------------------------------------
 
-import { readFileSync, readdirSync } from "node:fs";
-import { resolve, extname } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { beforeAll, describe, expect, it } from "vitest";
-
-import { ReteLitAdapter } from "@sw-editor/editor-renderer-rete-lit";
-import { ReactFlowAdapter } from "@sw-editor/editor-renderer-react-flow";
-import type { RendererAdapter } from "@sw-editor/editor-renderer-contract";
-
+import type { SourceFormat, WorkflowGraph, WorkflowSource } from "@sw-editor/editor-core";
 import {
   bootstrapWorkflowGraph,
+  INITIAL_EDGE_ID,
   insertTask,
   loadWorkflow,
   parseWorkflowSource,
   projectWorkflowToGraph,
+  RevisionCounter,
   serializeWorkflow,
   validateWorkflow,
-  RevisionCounter,
-  INITIAL_EDGE_ID,
 } from "@sw-editor/editor-core";
-import type { SourceFormat, WorkflowSource, WorkflowGraph } from "@sw-editor/editor-core";
+import type { RendererAdapter } from "@sw-editor/editor-renderer-contract";
+import { ReactFlowAdapter } from "@sw-editor/editor-renderer-react-flow";
+import { ReteLitAdapter } from "@sw-editor/editor-renderer-rete-lit";
+import { beforeAll, describe, expect, it } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Fixture discovery
 // ---------------------------------------------------------------------------
 
-const FIXTURES_DIR = resolve(
-  fileURLToPath(new URL(".", import.meta.url)),
-  "../fixtures/valid",
-);
+const FIXTURES_DIR = resolve(fileURLToPath(new URL(".", import.meta.url)), "../fixtures/valid");
 
 /**
  * A discovered fixture file with its parsed format and raw content.
@@ -315,21 +292,12 @@ function graphFingerprint(graph: WorkflowGraph): string {
  * @param graphB - Second graph (e.g. produced in a react-flow context).
  * @param label - Description used in error messages.
  */
-function assertGraphParity(
-  graphA: WorkflowGraph,
-  graphB: WorkflowGraph,
-  label: string,
-): void {
-  expect(
-    graphFingerprint(graphA),
-    `Graph fingerprint mismatch for "${label}"`,
-  ).toBe(graphFingerprint(graphB));
-  expect(graphA.nodes.length, `Node count mismatch for "${label}"`).toBe(
-    graphB.nodes.length,
+function assertGraphParity(graphA: WorkflowGraph, graphB: WorkflowGraph, label: string): void {
+  expect(graphFingerprint(graphA), `Graph fingerprint mismatch for "${label}"`).toBe(
+    graphFingerprint(graphB),
   );
-  expect(graphA.edges.length, `Edge count mismatch for "${label}"`).toBe(
-    graphB.edges.length,
-  );
+  expect(graphA.nodes.length, `Node count mismatch for "${label}"`).toBe(graphB.nodes.length);
+  expect(graphA.edges.length, `Edge count mismatch for "${label}"`).toBe(graphB.edges.length);
 }
 
 // ---------------------------------------------------------------------------
@@ -446,12 +414,8 @@ describe("Renderer MVP parity (SC-005)", () => {
         expect(graphForReteLit.edges).toHaveLength(graphForReactFlow.edges.length);
 
         // Start node connects to the same kind of target in both contexts.
-        const startEdgeA = graphForReteLit.edges.find(
-          (e) => e.source === "__start__",
-        );
-        const startEdgeB = graphForReactFlow.edges.find(
-          (e) => e.source === "__start__",
-        );
+        const startEdgeA = graphForReteLit.edges.find((e) => e.source === "__start__");
+        const startEdgeB = graphForReactFlow.edges.find((e) => e.source === "__start__");
         expect(startEdgeA).toBeDefined();
         expect(startEdgeB).toBeDefined();
 
@@ -508,9 +472,7 @@ describe("Renderer MVP parity (SC-005)", () => {
             result.ok,
             result.ok
               ? "ok"
-              : `loadWorkflow failed: ${result.diagnostics
-                  .map((d) => d.message)
-                  .join("; ")}`,
+              : `loadWorkflow failed: ${result.diagnostics.map((d) => d.message).join("; ")}`,
           ).toBe(true);
           if (!result.ok) return;
 
@@ -579,9 +541,7 @@ describe("Renderer MVP parity (SC-005)", () => {
           parseResult.ok,
           parseResult.ok
             ? "ok"
-            : `Parse failed: ${parseResult.diagnostics
-                .map((d) => d.message)
-                .join("; ")}`,
+            : `Parse failed: ${parseResult.diagnostics.map((d) => d.message).join("; ")}`,
         ).toBe(true);
         if (!parseResult.ok) return;
 
@@ -625,15 +585,12 @@ describe("Renderer MVP parity (SC-005)", () => {
         if (!parseResult.ok) return;
 
         const origModel = parseResult.workflow;
-        const origTaskCount = Array.isArray(origModel.do)
-          ? origModel.do.length
-          : 0;
+        const origTaskCount = Array.isArray(origModel.do) ? origModel.do.length : 0;
 
         // Add metadata to the document (a typical edit operation).
         const docRecord = origModel.document as unknown as Record<string, unknown>;
-        const existingMeta =
-          (docRecord["metadata"] as Record<string, unknown> | undefined) ?? {};
-        docRecord["metadata"] = {
+        const existingMeta = (docRecord.metadata as Record<string, unknown> | undefined) ?? {};
+        docRecord.metadata = {
           ...existingMeta,
           parityTestMarker: "edited",
         };
@@ -653,12 +610,8 @@ describe("Renderer MVP parity (SC-005)", () => {
         const graphBefore = projectWorkflowToGraph(origModel);
         const graphAfter = projectWorkflowToGraph(reparsed.workflow);
 
-        const tasksBefore = graphBefore.nodes.filter(
-          (n) => n.kind === "task",
-        ).length;
-        const tasksAfter = graphAfter.nodes.filter(
-          (n) => n.kind === "task",
-        ).length;
+        const tasksBefore = graphBefore.nodes.filter((n) => n.kind === "task").length;
+        const tasksAfter = graphAfter.nodes.filter((n) => n.kind === "task").length;
         expect(tasksAfter).toBe(tasksBefore);
       });
     });
@@ -704,14 +657,8 @@ describe("Renderer MVP parity (SC-005)", () => {
           if (!parseResult.ok) return;
 
           // Both renderer contexts call the same serializeWorkflow function.
-          const exportedA = serializeWorkflow(
-            parseResult.workflow,
-            fixture.format,
-          );
-          const exportedB = serializeWorkflow(
-            parseResult.workflow,
-            fixture.format,
-          );
+          const exportedA = serializeWorkflow(parseResult.workflow, fixture.format);
+          const exportedB = serializeWorkflow(parseResult.workflow, fixture.format);
 
           // The serializer is deterministic; outputs must be identical.
           expect(exportedA.content).toBe(exportedB.content);
@@ -748,17 +695,10 @@ describe("Renderer MVP parity (SC-005)", () => {
           const parseResult = parseWorkflowSource(src);
           if (!parseResult.ok) continue;
 
-          const crossFormat: SourceFormat =
-            fixture.format === "json" ? "yaml" : "json";
+          const crossFormat: SourceFormat = fixture.format === "json" ? "yaml" : "json";
 
-          const exportedA = serializeWorkflow(
-            parseResult.workflow,
-            crossFormat,
-          );
-          const exportedB = serializeWorkflow(
-            parseResult.workflow,
-            crossFormat,
-          );
+          const exportedA = serializeWorkflow(parseResult.workflow, crossFormat);
+          const exportedB = serializeWorkflow(parseResult.workflow, crossFormat);
 
           expect(exportedA.content, `Cross-format export mismatch: ${fixture.name}`).toBe(
             exportedB.content,

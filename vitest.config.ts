@@ -36,34 +36,19 @@ export default defineConfig({
         resolve: {
           alias: {
             "@sw-editor/editor-renderer-contract": fileURLToPath(
-              new URL(
-                "./packages/editor-renderer-contract/src/index.ts",
-                import.meta.url,
-              ),
+              new URL("./packages/editor-renderer-contract/src/index.ts", import.meta.url),
             ),
             "@sw-editor/editor-renderer-rete-lit": fileURLToPath(
-              new URL(
-                "./packages/editor-renderer-rete-lit/src/index.ts",
-                import.meta.url,
-              ),
+              new URL("./packages/editor-renderer-rete-lit/src/index.ts", import.meta.url),
             ),
             "@sw-editor/editor-renderer-react-flow": fileURLToPath(
-              new URL(
-                "./packages/editor-renderer-react-flow/src/index.ts",
-                import.meta.url,
-              ),
+              new URL("./packages/editor-renderer-react-flow/src/index.ts", import.meta.url),
             ),
             "@sw-editor/editor-host-client": fileURLToPath(
-              new URL(
-                "./packages/editor-host-client/src/index.ts",
-                import.meta.url,
-              ),
+              new URL("./packages/editor-host-client/src/index.ts", import.meta.url),
             ),
             "@sw-editor/editor-core": fileURLToPath(
-              new URL(
-                "./packages/editor-core/src/index.ts",
-                import.meta.url,
-              ),
+              new URL("./packages/editor-core/src/index.ts", import.meta.url),
             ),
           },
         },
@@ -77,28 +62,16 @@ export default defineConfig({
         resolve: {
           alias: {
             "@sw-editor/editor-core": fileURLToPath(
-              new URL(
-                "./packages/editor-core/src/index.ts",
-                import.meta.url,
-              ),
+              new URL("./packages/editor-core/src/index.ts", import.meta.url),
             ),
             "@sw-editor/editor-renderer-contract": fileURLToPath(
-              new URL(
-                "./packages/editor-renderer-contract/src/index.ts",
-                import.meta.url,
-              ),
+              new URL("./packages/editor-renderer-contract/src/index.ts", import.meta.url),
             ),
             "@sw-editor/editor-renderer-rete-lit": fileURLToPath(
-              new URL(
-                "./packages/editor-renderer-rete-lit/src/index.ts",
-                import.meta.url,
-              ),
+              new URL("./packages/editor-renderer-rete-lit/src/index.ts", import.meta.url),
             ),
             "@sw-editor/editor-renderer-react-flow": fileURLToPath(
-              new URL(
-                "./packages/editor-renderer-react-flow/src/index.ts",
-                import.meta.url,
-              ),
+              new URL("./packages/editor-renderer-react-flow/src/index.ts", import.meta.url),
             ),
           },
         },

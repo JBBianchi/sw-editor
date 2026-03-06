@@ -30,9 +30,7 @@ import type { GraphEdge, GraphNode, WorkflowGraph } from "./types.js";
  * @returns A {@link WorkflowGraph} with synthetic boundary nodes and one node
  *   per top-level task.
  */
-export function projectWorkflowToGraph(
-  workflow: Specification.Workflow
-): WorkflowGraph {
+export function projectWorkflowToGraph(workflow: Specification.Workflow): WorkflowGraph {
   const startNode: GraphNode = { id: START_NODE_ID, kind: "start" };
   const endNode: GraphNode = { id: END_NODE_ID, kind: "end" };
 
@@ -50,7 +48,7 @@ export function projectWorkflowToGraph(
 
   // Build a lookup map from task name to array index for transition resolution.
   const taskIndexByName = new Map<string, number>(
-    taskEntries.map(([name], index) => [name, index])
+    taskEntries.map(([name], index) => [name, index]),
   );
 
   // Build task nodes.
@@ -64,6 +62,7 @@ export function projectWorkflowToGraph(
   const edges: GraphEdge[] = [];
 
   // __start__ → first task.
+  // biome-ignore lint/style/noNonNullAssertion: taskEntries.length > 0 is guaranteed by the early-return guard above
   const firstTaskName = taskEntries[0]![0];
   edges.push({
     id: `${START_NODE_ID}->${firstTaskName}`,
@@ -73,6 +72,7 @@ export function projectWorkflowToGraph(
 
   // Inter-task and task-to-end edges.
   for (let i = 0; i < taskEntries.length; i++) {
+    // biome-ignore lint/style/noNonNullAssertion: i is bounded by taskEntries.length; element is guaranteed to exist
     const [name, task] = taskEntries[i]!;
     const then = (task as { then?: string }).then;
 
@@ -88,6 +88,7 @@ export function projectWorkflowToGraph(
       // Named task reference.
       const namedIndex = taskIndexByName.get(then);
       if (namedIndex !== undefined) {
+        // biome-ignore lint/style/noNonNullAssertion: namedIndex was retrieved from taskIndexByName which maps task names to valid indices
         targetId = taskEntries[namedIndex]![0];
       } else {
         // Graceful fallback: unknown target resolves to end.
@@ -124,7 +125,7 @@ export function projectWorkflowToGraph(
  *   list is absent or empty.
  */
 function extractTaskEntries(
-  taskList: Specification.TaskList | undefined
+  taskList: Specification.TaskList | undefined,
 ): [string, Specification.Task][] {
   if (!taskList || taskList.length === 0) {
     return [];

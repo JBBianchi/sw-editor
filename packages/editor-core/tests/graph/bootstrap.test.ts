@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
+import type { WorkflowGraph } from "../../src/graph/index.js";
 import {
+  bootstrapWorkflowGraph,
   END_NODE_ID,
   INITIAL_EDGE_ID,
   START_NODE_ID,
-  bootstrapWorkflowGraph,
 } from "../../src/graph/index.js";
-import type { WorkflowGraph } from "../../src/graph/index.js";
 
 describe("bootstrapWorkflowGraph", () => {
   it("returns a graph with exactly 2 nodes and 1 edge", () => {

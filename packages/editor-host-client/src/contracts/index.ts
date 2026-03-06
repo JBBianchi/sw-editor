@@ -6,19 +6,17 @@
  *
  * @module contracts
  */
-export {
-  createCapabilitySnapshot,
-  CONTRACT_VERSION,
-  TARGET_VERSION,
-  SUPPORTED_VERSIONS,
-} from "./capabilities.js";
+
 export type {
   CapabilitySnapshot,
   RendererCapabilitySnapshot,
 } from "./capabilities.js";
 export {
-  EditorEventName,
-} from "./events.js";
+  CONTRACT_VERSION,
+  createCapabilitySnapshot,
+  SUPPORTED_VERSIONS,
+  TARGET_VERSION,
+} from "./capabilities.js";
 export type {
   BaseEventPayload,
   EditorDiagnosticsChangedPayload,
@@ -27,6 +25,7 @@ export type {
   EditorSelectionChangedPayload,
   WorkflowChangedPayload,
 } from "./events.js";
+export { EditorEventName } from "./events.js";
 export type {
   ExportWorkflowSourceOptions,
   ExportWorkflowSourceResult,

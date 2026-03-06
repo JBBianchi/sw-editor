@@ -39,9 +39,11 @@ vi.mock("rete", () => {
     constructor(public readonly name: string) {}
   }
   class Output {
+    // biome-ignore lint/complexity/noUselessConstructor: stub constructor matches rete.js Output signature for TypeScript compatibility
     constructor(_socket: Socket) {}
   }
   class Input {
+    // biome-ignore lint/complexity/noUselessConstructor: stub constructor matches rete.js Input signature for TypeScript compatibility
     constructor(_socket: Socket) {}
   }
   class Node {
@@ -51,19 +53,15 @@ vi.mock("rete", () => {
   }
   class Connection {
     id = `rete-conn-${Math.random().toString(36).slice(2)}`;
-    constructor(
-      _source: Node,
-      _sourceOutput: string,
-      _target: Node,
-      _targetInput: string,
-    ) {}
   }
   class NodeEditor {
     use(_plugin: unknown): void {}
     async clear(): Promise<void> {}
     async addNode(_node: Node): Promise<void> {}
     async addConnection(_conn: Connection): Promise<void> {}
-    getNodes(): Node[] { return []; }
+    getNodes(): Node[] {
+      return [];
+    }
   }
   return { ClassicPreset: { Socket, Output, Input, Node, Connection }, NodeEditor, GetSchemes: {} };
 });
@@ -99,15 +97,15 @@ vi.mock("rete-connection-plugin", () => {
 // Imports — must come after vi.mock() calls (they are hoisted by Vitest).
 // ---------------------------------------------------------------------------
 
-import { ReteLitAdapter } from "@sw-editor/editor-renderer-rete-lit";
-import { ReactFlowAdapter } from "@sw-editor/editor-renderer-react-flow";
-import type { RendererCapabilitySnapshot } from "@sw-editor/editor-renderer-contract";
 import {
   CONTRACT_VERSION,
-  TARGET_VERSION,
-  SUPPORTED_VERSIONS,
   createCapabilitySnapshot,
+  SUPPORTED_VERSIONS,
+  TARGET_VERSION,
 } from "@sw-editor/editor-host-client";
+import type { RendererCapabilitySnapshot } from "@sw-editor/editor-renderer-contract";
+import { ReactFlowAdapter } from "@sw-editor/editor-renderer-react-flow";
+import { ReteLitAdapter } from "@sw-editor/editor-renderer-rete-lit";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -125,21 +123,21 @@ function assertRendererCapabilitySnapshot(snapshot: unknown): void {
   const s = snapshot as Record<string, unknown>;
 
   // rendererId must be one of the two known renderer identifiers.
-  expect(["rete-lit", "react-flow"]).toContain(s["rendererId"]);
+  expect(["rete-lit", "react-flow"]).toContain(s.rendererId);
 
   // rendererVersion must be a non-empty string.
-  expect(typeof s["rendererVersion"]).toBe("string");
-  expect((s["rendererVersion"] as string).length).toBeGreaterThan(0);
+  expect(typeof s.rendererVersion).toBe("string");
+  expect((s.rendererVersion as string).length).toBeGreaterThan(0);
 
   // Required boolean capability flags.
-  expect(typeof s["supportsNodeRendererPlugins"]).toBe("boolean");
-  expect(typeof s["supportsNestedInlineProjection"]).toBe("boolean");
-  expect(typeof s["supportsRouteOverlayProjection"]).toBe("boolean");
+  expect(typeof s.supportsNodeRendererPlugins).toBe("boolean");
+  expect(typeof s.supportsNestedInlineProjection).toBe("boolean");
+  expect(typeof s.supportsRouteOverlayProjection).toBe("boolean");
 
   // Optional knownLimits — if present must be an array of strings.
-  if (s["knownLimits"] !== undefined) {
-    expect(Array.isArray(s["knownLimits"])).toBe(true);
-    const limits = s["knownLimits"] as unknown[];
+  if (s.knownLimits !== undefined) {
+    expect(Array.isArray(s.knownLimits)).toBe(true);
+    const limits = s.knownLimits as unknown[];
     for (const limit of limits) {
       expect(typeof limit).toBe("string");
     }
@@ -362,8 +360,7 @@ describe("Backward-compatible capability expansion", () => {
     };
 
     // Consumer must not throw when knownLimits is absent.
-    const readLimits = (caps: RendererCapabilitySnapshot): string[] =>
-      caps.knownLimits ?? [];
+    const readLimits = (caps: RendererCapabilitySnapshot): string[] => caps.knownLimits ?? [];
 
     expect(() => readLimits(snapshotWithoutLimits)).not.toThrow();
     expect(readLimits(snapshotWithoutLimits)).toEqual([]);
@@ -371,19 +368,16 @@ describe("Backward-compatible capability expansion", () => {
 
   it("consumer that ignores unknown fields can still read known fields", () => {
     // Simulate a snapshot with extra fields arriving from a newer bundle.
-    const extendedSnapshot = Object.assign(
-      {} as RendererCapabilitySnapshot,
-      {
-        rendererId: "react-flow" as const,
-        rendererVersion: "15.0.0",
-        supportsNodeRendererPlugins: true,
-        supportsNestedInlineProjection: true,
-        supportsRouteOverlayProjection: false,
-        // Unknown fields a v1 consumer does not know about.
-        supportsCollaborativeEditing: true,
-        supportsOfflineMode: false,
-      },
-    );
+    const extendedSnapshot = Object.assign({} as RendererCapabilitySnapshot, {
+      rendererId: "react-flow" as const,
+      rendererVersion: "15.0.0",
+      supportsNodeRendererPlugins: true,
+      supportsNestedInlineProjection: true,
+      supportsRouteOverlayProjection: false,
+      // Unknown fields a v1 consumer does not know about.
+      supportsCollaborativeEditing: true,
+      supportsOfflineMode: false,
+    });
 
     assertRendererCapabilitySnapshot(extendedSnapshot);
   });
@@ -416,9 +410,7 @@ describe("SC-005 — Renderer parity", () => {
     const reteLit = new ReteLitAdapter();
     const reactFlow = new ReactFlowAdapter();
 
-    expect(reteLit.capabilities.rendererId).not.toBe(
-      reactFlow.capabilities.rendererId,
-    );
+    expect(reteLit.capabilities.rendererId).not.toBe(reactFlow.capabilities.rendererId);
   });
 
   it("both adapters pass RendererCapabilitySnapshot schema validation", () => {

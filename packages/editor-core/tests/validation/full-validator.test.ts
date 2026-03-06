@@ -46,10 +46,7 @@ const DUPLICATE_TASKS_JSON = JSON.stringify({
     version: "1.0.0",
     namespace: "default",
   },
-  do: [
-    { stepA: { set: { x: 1 } } },
-    { stepA: { set: { x: 2 } } },
-  ],
+  do: [{ stepA: { set: { x: 1 } } }, { stepA: { set: { x: 2 } } }],
 });
 
 // ---------------------------------------------------------------------------

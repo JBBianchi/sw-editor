@@ -4,6 +4,9 @@
  * Re-exports all stable public symbols from each sub-module.
  */
 
+export * from "./commands/index.js";
+export * from "./diagnostics/index.js";
+export * from "./graph/index.js";
 export type {
   ParseDiagnostic,
   ParseFailure,
@@ -13,11 +16,6 @@ export type {
   WorkflowModel,
   WorkflowSource,
 } from "./source/index.js";
-
 export { parseWorkflowSource, serializeWorkflow } from "./source/index.js";
-
-export * from "./commands/index.js";
-export * from "./diagnostics/index.js";
-export * from "./graph/index.js";
 export * from "./state/index.js";
 export * from "./validation/index.js";

@@ -20,8 +20,7 @@ export type WorkflowChangedEvent = CustomEvent<WorkflowChangedPayload>;
  * The `detail` property carries an {@link EditorSelectionChangedPayload}
  * with the current selection (or `null` for workflow-level state).
  */
-export type EditorSelectionChangedEvent =
-  CustomEvent<EditorSelectionChangedPayload>;
+export type EditorSelectionChangedEvent = CustomEvent<EditorSelectionChangedPayload>;
 
 /**
  * Typed {@link CustomEvent} for the `editorDiagnosticsChanged` contract event.
@@ -29,8 +28,7 @@ export type EditorSelectionChangedEvent =
  * The `detail` property carries an {@link EditorDiagnosticsChangedPayload}
  * with the complete, up-to-date diagnostics collection.
  */
-export type EditorDiagnosticsChangedEvent =
-  CustomEvent<EditorDiagnosticsChangedPayload>;
+export type EditorDiagnosticsChangedEvent = CustomEvent<EditorDiagnosticsChangedPayload>;
 
 /**
  * Typed {@link CustomEvent} for the `editorError` contract event.

@@ -18,10 +18,7 @@
  */
 
 import { ReteLitAdapter } from "@sw-editor/editor-renderer-rete-lit";
-import {
-  createCapabilitySnapshot,
-  type CapabilitySnapshot,
-} from "./contracts/capabilities.js";
+import { type CapabilitySnapshot, createCapabilitySnapshot } from "./contracts/capabilities.js";
 
 // Instantiate a transient adapter solely to read its static capability snapshot.
 // The adapter is not mounted and will not render anything; `capabilities` is a
@@ -32,9 +29,7 @@ const _adapter = new ReteLitAdapter();
  * The capability snapshot for the `rete-lit` renderer bundle, computed once
  * at module evaluation time and frozen for the lifetime of the process.
  */
-const _snapshot: CapabilitySnapshot = createCapabilitySnapshot(
-  _adapter.capabilities,
-);
+const _snapshot: CapabilitySnapshot = createCapabilitySnapshot(_adapter.capabilities);
 
 /**
  * Return the capability snapshot for the active `rete-lit` editor bundle.

@@ -91,9 +91,7 @@ export type RendererSelectionEvent =
  *
  * @param event - The selection event emitted by the renderer.
  */
-export type RendererSelectionHandler = (
-  event: RendererSelectionEvent
-) => void;
+export type RendererSelectionHandler = (event: RendererSelectionEvent) => void;
 
 /**
  * Normalised event bridge surface that a renderer exposes to editor-core.

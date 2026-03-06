@@ -7,16 +7,8 @@
  * @module
  */
 
-import { ClassicPreset, NodeEditor } from "rete";
-import type { GetSchemes } from "rete";
-import { AreaExtensions, AreaPlugin } from "rete-area-plugin";
-import {
-  ConnectionPlugin,
-  Presets as ConnectionPresets,
-} from "rete-connection-plugin";
-import { LitPlugin, Presets } from "@retejs/lit-plugin";
 import type { LitArea2D } from "@retejs/lit-plugin";
-
+import { LitPlugin, Presets } from "@retejs/lit-plugin";
 import type {
   RendererAdapter,
   RendererCapabilitySnapshot,
@@ -25,6 +17,10 @@ import type {
   RendererSelectionHandler,
   WorkflowGraph,
 } from "@sw-editor/editor-renderer-contract";
+import type { GetSchemes } from "rete";
+import { ClassicPreset, NodeEditor } from "rete";
+import { AreaExtensions, AreaPlugin } from "rete-area-plugin";
+import { ConnectionPlugin, Presets as ConnectionPresets } from "rete-connection-plugin";
 
 // ---------------------------------------------------------------------------
 // Rete.js type definitions
@@ -145,7 +141,7 @@ class TrackingSelector extends AreaExtensions.Selector<SelectorEntity> {
   constructor(
     private readonly bridge: ReteLitEventBridge,
     private readonly reteNodeToGraphId: Map<string, string>,
-    private readonly reteConnToGraphId: Map<string, string>
+    private readonly reteConnToGraphId: Map<string, string>,
   ) {
     super();
   }
@@ -206,12 +202,8 @@ class TrackingSelector extends AreaExtensions.Selector<SelectorEntity> {
    * - Multi-selection or unmapped entity → `{ kind: "none" }` (simplifies consumer logic)
    */
   private emitCurrentSelection(): void {
-    const nodes = [...this.selected.values()].filter(
-      (e) => e.label === "node"
-    );
-    const conns = [...this.selected.values()].filter(
-      (e) => e.label === "connection"
-    );
+    const nodes = [...this.selected.values()].filter((e) => e.label === "node");
+    const conns = [...this.selected.values()].filter((e) => e.label === "connection");
 
     if (nodes.length === 1 && conns.length === 0) {
       const node = nodes[0];
@@ -332,8 +324,7 @@ export class ReteLitAdapter implements RendererAdapter {
   mount(container: HTMLElement, graph: WorkflowGraph): void {
     if (this.mounted !== null) {
       throw new Error(
-        "ReteLitAdapter: mount() called while already mounted. " +
-          "Call dispose() first."
+        "ReteLitAdapter: mount() called while already mounted. " + "Call dispose() first.",
       );
     }
 
@@ -352,7 +343,7 @@ export class ReteLitAdapter implements RendererAdapter {
     const selector = new TrackingSelector(
       this.bridge,
       this.reteNodeToGraphId,
-      this.reteConnToGraphId
+      this.reteConnToGraphId,
     );
 
     AreaExtensions.selectableNodes(area, selector, {
@@ -455,12 +446,7 @@ export class ReteLitAdapter implements RendererAdapter {
 
       if (sourceNode === undefined || targetNode === undefined) continue;
 
-      const conn = new ClassicPreset.Connection(
-        sourceNode,
-        "out",
-        targetNode,
-        "in"
-      );
+      const conn = new ClassicPreset.Connection(sourceNode, "out", targetNode, "in");
       await editor.addConnection(conn);
       this.reteConnToGraphId.set(conn.id, graphEdge.id);
     }

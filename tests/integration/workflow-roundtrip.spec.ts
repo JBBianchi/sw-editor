@@ -16,25 +16,19 @@
  * @module
  */
 
-import { readFileSync, readdirSync } from "node:fs";
-import { resolve, extname, basename } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect } from "vitest";
+import type { WorkflowSource } from "@sw-editor/editor-core";
 
-import {
-  parseWorkflowSource,
-  serializeWorkflow,
-} from "@sw-editor/editor-core";
-import type { SourceFormat, WorkflowSource } from "@sw-editor/editor-core";
+import { parseWorkflowSource, serializeWorkflow } from "@sw-editor/editor-core";
+import { describe, expect, it } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Fixture discovery
 // ---------------------------------------------------------------------------
 
-const FIXTURES_DIR = resolve(
-  fileURLToPath(new URL(".", import.meta.url)),
-  "../fixtures/valid",
-);
+const FIXTURES_DIR = resolve(fileURLToPath(new URL(".", import.meta.url)), "../fixtures/valid");
 
 /**
  * A single discovered fixture with its raw content and declared format.
@@ -127,9 +121,8 @@ function applySmallEdit(source: WorkflowSource): WorkflowSource {
 
   // Add a marker to document.metadata without touching any other section.
   const docRecord = model.document as unknown as Record<string, unknown>;
-  const existingMeta =
-    (docRecord["metadata"] as Record<string, unknown> | undefined) ?? {};
-  docRecord["metadata"] = { ...existingMeta, roundTripTestMarker: "integrated" };
+  const existingMeta = (docRecord.metadata as Record<string, unknown> | undefined) ?? {};
+  docRecord.metadata = { ...existingMeta, roundTripTestMarker: "integrated" };
 
   return serializeWorkflow(model, source.format);
 }
@@ -191,8 +184,8 @@ function assertRoundTripSemantics(
 
   // The edit marker must be present after the round-trip.
   const repDoc = rep.document as unknown as Record<string, unknown>;
-  const repMeta = repDoc["metadata"] as Record<string, unknown> | undefined;
-  expect(repMeta?.["roundTripTestMarker"]).toBe("integrated");
+  const repMeta = repDoc.metadata as Record<string, unknown> | undefined;
+  expect(repMeta?.roundTripTestMarker).toBe("integrated");
 
   // Unrelated sections: if the original had an `input` section it must still
   // exist in the re-parsed output.
@@ -245,9 +238,8 @@ describe("Workflow round-trip integration (SC-003)", () => {
           // Apply the edit then serialize to the cross format.
           const model = parseResult.workflow;
           const docRecord = model.document as unknown as Record<string, unknown>;
-          const existingMeta =
-            (docRecord["metadata"] as Record<string, unknown> | undefined) ?? {};
-          docRecord["metadata"] = { ...existingMeta, roundTripTestMarker: "integrated" };
+          const existingMeta = (docRecord.metadata as Record<string, unknown> | undefined) ?? {};
+          docRecord.metadata = { ...existingMeta, roundTripTestMarker: "integrated" };
 
           const crossExport = serializeWorkflow(model, crossFormat);
           assertRoundTripSemantics(src, crossExport, crossFormat);
@@ -265,7 +257,10 @@ describe("Workflow round-trip integration (SC-003)", () => {
       const total = scenarioResults.length;
       const passedCount = scenarioResults.filter((r) => r.passed).length;
 
-      expect(total, "No scenarios were executed — fixture discovery may have failed").toBeGreaterThan(0);
+      expect(
+        total,
+        "No scenarios were executed — fixture discovery may have failed",
+      ).toBeGreaterThan(0);
 
       const rate = passedCount / total;
       const failLines = scenarioResults

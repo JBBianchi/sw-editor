@@ -7,5 +7,6 @@
  *
  * @module diagnostics
  */
-export { DiagnosticsRenderer } from "./rendering.js";
+
 export type { FindNodeElementCallback } from "./rendering.js";
+export { DiagnosticsRenderer } from "./rendering.js";

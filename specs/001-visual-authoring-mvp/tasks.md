@@ -66,3 +66,11 @@
 - [x] T029 Run quickstart scenarios from `specs/001-visual-authoring-mvp/quickstart.md` and capture results
 - [x] T030 [P] Add renderer-matrix contract tests for `getCapabilities()` payload in `tests/contract/renderer-capabilities.contract.spec.ts`
 - [x] T031 [P] Add renderer-matrix integration tests for create/load/edit/export/validate parity in `tests/integration/renderer-mvp-parity.spec.ts`
+
+## Phase 7: Gap Resolution (Post-Audit)
+
+- [x] T032 Fix all biome lint and format violations across codebase (`pnpm biome check .` exits clean)
+- [x] T033 Document and triage all gaps from audit tasks #94, #95, #96; file out-of-scope items as child issues
+- [ ] T034 [OUT-OF-SCOPE #106] Create demo HTML harness and add `webServer` to `playwright.config.ts` to automate Playwright e2e (GAP-001 / F001 — SC-001, SC-007)
+- [ ] T035 [OUT-OF-SCOPE #107] Add `tests/e2e/quickstart-scenarios.spec.ts` Playwright counterpart for quickstart scenarios (Finding F002)
+- [ ] T036 [OUT-OF-SCOPE #108] Add package-level unit tests for `packages/editor-host-client/` (Finding F003)

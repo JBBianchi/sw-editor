@@ -9,25 +9,26 @@
  *
  * @module
  */
-import React, { useState, useLayoutEffect } from "react";
-import { createRoot, type Root } from "react-dom/client";
-import {
-  ReactFlow,
-  ReactFlowProvider,
-  type Node,
-  type Edge,
-  type OnSelectionChangeParams,
-} from "@xyflow/react";
+
 import type {
   RendererAdapter,
   RendererCapabilitySnapshot,
   RendererEventBridge,
-  RendererGraphNode,
   RendererGraphEdge,
+  RendererGraphNode,
   RendererSelectionEvent,
   RendererSelectionHandler,
   WorkflowGraph,
 } from "@sw-editor/editor-renderer-contract";
+import {
+  type Edge,
+  type Node,
+  type OnSelectionChangeParams,
+  ReactFlow,
+  ReactFlowProvider,
+} from "@xyflow/react";
+import React, { useLayoutEffect, useState } from "react";
+import { createRoot, type Root } from "react-dom/client";
 
 // ---------------------------------------------------------------------------
 // Internal types
@@ -113,9 +114,7 @@ function toRFNode(node: RendererGraphNode, index: number): RFNode {
     data: {
       ...node.data,
       kind: node.kind,
-      ...(node.taskReference !== undefined
-        ? { taskReference: node.taskReference }
-        : {}),
+      ...(node.taskReference !== undefined ? { taskReference: node.taskReference } : {}),
     },
   };
 }
@@ -173,6 +172,7 @@ function WorkflowFlowApp(props: WorkflowFlowAppProps): React.ReactElement {
   // Using useLayoutEffect ensures the controller is available before the
   // browser has painted, which prevents a race between mount() returning and
   // the first update() call arriving.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: empty deps array is intentional; controller is published once on mount
   useLayoutEffect(() => {
     props.onController({
       updateGraph(newNodes: RFNode[], newEdges: RFEdge[]): void {
@@ -180,8 +180,6 @@ function WorkflowFlowApp(props: WorkflowFlowAppProps): React.ReactElement {
         setEdges(newEdges);
       },
     });
-    // The dependency array is intentionally empty: we only want to publish the
-    // controller once, after the initial render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -194,7 +192,7 @@ function WorkflowFlowApp(props: WorkflowFlowAppProps): React.ReactElement {
       onSelectionChange: props.onSelectionChange,
       fitView: true,
       proOptions: { hideAttribution: false },
-    })
+    }),
   );
 }
 
@@ -361,7 +359,7 @@ export class ReactFlowAdapter implements RendererAdapter {
         onController: (controller: FlowController) => {
           this.controller = controller;
         },
-      })
+      }),
     );
   }
 
@@ -382,9 +380,7 @@ export class ReactFlowAdapter implements RendererAdapter {
       throw new Error("ReactFlowAdapter: update() called after dispose()");
     }
     if (this.controller === null) {
-      throw new Error(
-        "ReactFlowAdapter: update() called before mount() completed"
-      );
+      throw new Error("ReactFlowAdapter: update() called before mount() completed");
     }
 
     const { nodes, edges } = toRFGraph(graph);

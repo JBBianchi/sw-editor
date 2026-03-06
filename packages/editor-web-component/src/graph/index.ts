@@ -7,12 +7,13 @@
  *
  * @module graph
  */
-export {
-  InsertionUI,
-  MVP_TASK_TYPES,
-} from "./insertion-ui.js";
+
 export type {
   FocusNodeCallback,
   SerializeGraphCallback,
   TaskTypeDescriptor,
+} from "./insertion-ui.js";
+export {
+  InsertionUI,
+  MVP_TASK_TYPES,
 } from "./insertion-ui.js";

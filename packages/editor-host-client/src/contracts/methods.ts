@@ -81,9 +81,7 @@ export interface HostEditorContract {
    * @param options - Optional export settings (e.g. desired format).
    * @returns A promise that resolves with the serialized source.
    */
-  exportWorkflowSource(
-    options?: ExportWorkflowSourceOptions,
-  ): Promise<ExportWorkflowSourceResult>;
+  exportWorkflowSource(options?: ExportWorkflowSourceOptions): Promise<ExportWorkflowSourceResult>;
 
   /**
    * Trigger a validation pass on the current workflow.
