@@ -28,7 +28,7 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      "pnpm --filter @sw-editor/demo build && pnpm --filter @sw-editor/demo preview",
+      "pnpm --filter @sw-editor/example-e2e-harness build && pnpm --filter @sw-editor/example-e2e-harness preview",
     url: "http://localhost:4173",
     reuseExistingServer: !process.env.CI,
   },
