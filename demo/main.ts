@@ -3,25 +3,77 @@
  *
  * Imports the `rete-lit` renderer backend from `@sw-editor/editor-host-client`
  * and defines the `<sw-editor>` custom element. The element bootstraps an empty
- * workflow graph (start → end) and mounts the rete-lit renderer into itself on
- * connection, so that consumer pages immediately see `data-node-type="start"`
- * boundary nodes without any additional scripting.
+ * workflow graph (start → end), mounts the rete-lit renderer, and attaches
+ * insertion affordance buttons for each graph edge so that Scenario 2 of the
+ * quickstart can be exercised end-to-end.
+ *
+ * The "Create new workflow" button in the page header resets the editor to a
+ * fresh bootstrapped graph by dispatching the `sw:create` custom event on the
+ * `sw-editor` element.
  *
  * @module demo/main
  */
 
-import { bootstrapWorkflowGraph } from "@sw-editor/editor-core";
+import type { WorkflowGraph } from "@sw-editor/editor-core";
+import { bootstrapWorkflowGraph, insertTask, RevisionCounter } from "@sw-editor/editor-core";
 import { ReteLitAdapter } from "@sw-editor/editor-host-client/rete-lit";
+
+// ---------------------------------------------------------------------------
+// Task type catalogue (mirrors InsertionUI.MVP_TASK_TYPES)
+// ---------------------------------------------------------------------------
+
+/** Minimal descriptor for a selectable task type in the insertion menu. */
+interface TaskTypeDescriptor {
+  /** Machine-readable identifier passed as `taskReference` to `insertTask`. */
+  readonly id: string;
+  /** Human-readable label rendered in the menu. */
+  readonly label: string;
+}
+
+/**
+ * Full set of MVP task types exposed in the insertion menu.
+ *
+ * Mirrors the list in `packages/editor-web-component/src/graph/insertion-ui.ts`
+ * so that the demo exercises the same choices a real host would offer.
+ */
+const MVP_TASK_TYPES: readonly TaskTypeDescriptor[] = [
+  { id: "call", label: "Call Task" },
+  { id: "do", label: "Do Task" },
+  { id: "fork", label: "Fork Task" },
+  { id: "emit", label: "Emit Task" },
+  { id: "listen", label: "Listen Task" },
+  { id: "run", label: "Run Task" },
+  { id: "set", label: "Set Task" },
+  { id: "switch", label: "Switch Task" },
+  { id: "try", label: "Try Task" },
+  { id: "wait", label: "Wait Task" },
+] as const;
+
+// ---------------------------------------------------------------------------
+// SwEditorElement
+// ---------------------------------------------------------------------------
 
 /**
  * The `sw-editor` custom element.
  *
  * Mounts a rete-lit renderer displaying a bootstrapped empty workflow graph
- * on connection and disposes it on disconnection.
+ * on connection and disposes it on disconnection. Provides:
+ *
+ * - Insertion affordance buttons (`button[aria-label="Insert task"]`) for every
+ *   graph edge so that the Scenario 2 quickstart step can be automated.
+ * - A keyboard-navigable task type selection menu
+ *   (`[role="menu"][aria-label="Select task type to insert"]`) that opens when
+ *   an affordance is activated.
+ * - `[data-testid="graph-node"]` markers for each inserted task node, enabling
+ *   Playwright assertions to verify graph state without inspecting rete internals.
+ *
+ * Listen for the `sw:create` custom event on this element to reset the graph
+ * to a fresh bootstrapped state (used by the "Create new workflow" button in
+ * the demo header).
  *
  * **Usage**
  * ```html
- * <sw-editor style="width: 100%; height: 600px;"></sw-editor>
+ * <sw-editor id="editor" style="width:100%;height:600px;position:relative;"></sw-editor>
  * <script type="module" src="main.js"></script>
  * ```
  */
@@ -29,15 +81,42 @@ class SwEditorElement extends HTMLElement {
   /** Active renderer adapter, present only while the element is connected. */
   #adapter: ReteLitAdapter | null = null;
 
+  /** Current in-memory workflow graph. */
+  #graph: WorkflowGraph | null = null;
+
+  /** Monotonic revision counter for this editor instance. */
+  #counter: RevisionCounter | null = null;
+
+  // --------------------------------------------------------------------------
+  // Lifecycle
+  // --------------------------------------------------------------------------
+
   /**
    * Called by the browser when the element is inserted into the document.
    *
-   * Creates a fresh `ReteLitAdapter`, bootstraps an empty workflow graph, and
-   * mounts the renderer into this element.
+   * Creates the rete-lit renderer canvas, bootstraps the initial workflow
+   * graph, mounts the renderer, and renders the first set of affordances.
    */
   connectedCallback(): void {
+    // Create an inner div for the rete canvas so rete's overflow:hidden does
+    // not clip sibling elements (affordance buttons, task menus) we append to
+    // `this`.
+    const canvas = document.createElement("div");
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    this.appendChild(canvas);
+
+    this.#counter = new RevisionCounter();
+    this.#graph = bootstrapWorkflowGraph();
+
     this.#adapter = new ReteLitAdapter();
-    this.#adapter.mount(this, bootstrapWorkflowGraph());
+    this.#adapter.mount(canvas, this.#graph);
+
+    this.#syncAffordances();
+
+    // Allow the "Create new workflow" button to reset this element's state via
+    // a custom event rather than a direct method reference.
+    this.addEventListener("sw:create", this.#handleCreate);
   }
 
   /**
@@ -46,9 +125,281 @@ class SwEditorElement extends HTMLElement {
    * Disposes the renderer adapter and releases all associated resources.
    */
   disconnectedCallback(): void {
+    this.removeEventListener("sw:create", this.#handleCreate);
     this.#adapter?.dispose();
     this.#adapter = null;
+    this.#graph = null;
+    this.#counter = null;
+  }
+
+  // --------------------------------------------------------------------------
+  // sw:create handler
+  // --------------------------------------------------------------------------
+
+  /**
+   * Resets the graph to a freshly bootstrapped state.
+   *
+   * Triggered by the `sw:create` custom event dispatched by the "Create new
+   * workflow" button in the demo header.
+   */
+  readonly #handleCreate = (): void => {
+    if (!this.#adapter) return;
+    this.#counter = new RevisionCounter();
+    this.#graph = bootstrapWorkflowGraph();
+    this.#adapter.update(this.#graph);
+    this.#syncAffordances();
+    this.#syncTaskNodes();
+  };
+
+  // --------------------------------------------------------------------------
+  // Affordance management
+  // --------------------------------------------------------------------------
+
+  /**
+   * Synchronises insertion affordance buttons with the current graph edges.
+   *
+   * Removes all existing affordance buttons and creates one new button per
+   * edge in {@link #graph}. Buttons are appended directly to `this` (the
+   * sw-editor element) with absolute positioning so they appear above the
+   * rete canvas without being clipped by its `overflow: hidden` style.
+   */
+  #syncAffordances(): void {
+    for (const el of Array.from(this.querySelectorAll(".sw-insertion-affordance"))) {
+      el.remove();
+    }
+
+    if (!this.#graph) return;
+
+    // Position affordances relative to edge index so multiple affordances are
+    // visually distinct. This is intentionally simplified for the demo; a
+    // production implementation would use the actual edge midpoint coordinates
+    // from the renderer.
+    this.#graph.edges.forEach((edge, index) => {
+      this.#addAffordanceForEdge(edge.id, index);
+    });
+  }
+
+  /**
+   * Creates and appends a single insertion affordance button for the given edge.
+   *
+   * @param edgeId - Stable ID of the graph edge this affordance targets.
+   * @param index - Zero-based position index used for simple visual layout.
+   */
+  #addAffordanceForEdge(edgeId: string, index: number): void {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("aria-label", "Insert task");
+    button.className = "sw-insertion-affordance";
+    button.textContent = "+";
+
+    // Simple absolute positioning relative to the sw-editor container.
+    // Multiple affordances are stacked vertically so each is visible.
+    button.style.position = "absolute";
+    button.style.top = `${20 + index * 30}px`;
+    button.style.left = "50%";
+    button.style.transform = "translateX(-50%)";
+    button.style.zIndex = "10";
+    button.style.cursor = "pointer";
+
+    const open = (): void => this.#openMenu(edgeId);
+    button.addEventListener("click", open);
+    button.addEventListener("keydown", (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        open();
+      }
+    });
+
+    this.appendChild(button);
+  }
+
+  // --------------------------------------------------------------------------
+  // Task type menu
+  // --------------------------------------------------------------------------
+
+  /**
+   * Opens the task type selection menu for the given edge, closing any
+   * previously open menu first.
+   *
+   * The menu is appended to `this` with absolute positioning above the rete
+   * canvas, and initial keyboard focus is moved to the first menu item.
+   *
+   * @param edgeId - The edge at which the new task will be inserted.
+   */
+  #openMenu(edgeId: string): void {
+    // Close any existing menu before opening a new one.
+    for (const el of Array.from(this.querySelectorAll(".sw-task-menu"))) {
+      el.remove();
+    }
+
+    const menu = document.createElement("div");
+    menu.setAttribute("role", "menu");
+    menu.setAttribute("aria-label", "Select task type to insert");
+    menu.className = "sw-task-menu";
+    menu.style.position = "absolute";
+    menu.style.top = "50%";
+    menu.style.left = "50%";
+    menu.style.transform = "translate(-50%, -50%)";
+    menu.style.zIndex = "20";
+    menu.style.background = "white";
+    menu.style.border = "1px solid #ccc";
+    menu.style.borderRadius = "4px";
+    menu.style.padding = "4px";
+    menu.style.minWidth = "160px";
+
+    for (const taskType of MVP_TASK_TYPES) {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.setAttribute("role", "menuitem");
+      item.className = "sw-task-menu__item";
+      item.textContent = taskType.label;
+      item.style.display = "block";
+      item.style.width = "100%";
+      item.style.textAlign = "left";
+      item.style.padding = "4px 8px";
+      item.style.cursor = "pointer";
+
+      const commit = (): void => {
+        menu.remove();
+        this.#commitInsertion(edgeId, taskType.id);
+      };
+
+      item.addEventListener("click", commit);
+      item.addEventListener("keydown", (e: KeyboardEvent) => {
+        switch (e.key) {
+          case "Enter":
+          case " ":
+            e.preventDefault();
+            commit();
+            break;
+          case "ArrowDown":
+            e.preventDefault();
+            (item.nextElementSibling as HTMLElement | null)?.focus();
+            break;
+          case "ArrowUp":
+            e.preventDefault();
+            (item.previousElementSibling as HTMLElement | null)?.focus();
+            break;
+          case "Escape":
+            e.preventDefault();
+            menu.remove();
+            break;
+        }
+      });
+
+      menu.appendChild(item);
+    }
+
+    this.appendChild(menu);
+    (menu.firstElementChild as HTMLElement | null)?.focus();
+  }
+
+  // --------------------------------------------------------------------------
+  // Insertion execution
+  // --------------------------------------------------------------------------
+
+  /**
+   * Executes `insertTask`, updates the renderer, and refreshes affordances and
+   * task node markers.
+   *
+   * @param edgeId - The edge to split with the new task node.
+   * @param taskReference - The task type identifier (e.g. `"call"`).
+   */
+  #commitInsertion(edgeId: string, taskReference: string): void {
+    if (!this.#graph || !this.#counter || !this.#adapter) return;
+
+    try {
+      const result = insertTask(this.#graph, this.#counter, { edgeId, taskReference });
+      this.#graph = result.graph;
+    } catch {
+      // Edge may have been removed; nothing to do.
+      return;
+    }
+
+    this.#adapter.update(this.#graph);
+    this.#syncAffordances();
+    this.#syncTaskNodes();
+  }
+
+  // --------------------------------------------------------------------------
+  // Task node markers
+  // --------------------------------------------------------------------------
+
+  /**
+   * Synchronises `[data-testid="graph-node"]` marker elements with the current
+   * set of task nodes in {@link #graph}.
+   *
+   * These markers are lightweight `<span>` elements appended to `this` that
+   * allow Playwright assertions (`page.locator('[data-testid="graph-node"]')`)
+   * to verify that task nodes have been inserted without needing to query
+   * rete-lit's internal DOM representation.
+   */
+  #syncTaskNodes(): void {
+    for (const el of Array.from(this.querySelectorAll('[data-testid="graph-node"]'))) {
+      el.remove();
+    }
+
+    if (!this.#graph) return;
+
+    for (const node of this.#graph.nodes) {
+      if (node.kind === "task") {
+        const marker = document.createElement("span");
+        marker.setAttribute("data-testid", "graph-node");
+        marker.setAttribute("data-node-id", node.id);
+        // Surface the taskReference as text content so assertions like
+        // `toContainText("my-call-task")` can be exercised once the property
+        // panel editing flow is implemented.
+        marker.textContent = node.taskReference ?? "";
+        // Position the marker visually so it is not clipped or hidden; absolute
+        // positioning keeps it within the sw-editor's bounds.
+        marker.style.position = "absolute";
+        marker.style.bottom = "4px";
+        marker.style.left = "4px";
+        marker.style.fontSize = "11px";
+        marker.style.color = "#555";
+        marker.style.zIndex = "5";
+        this.appendChild(marker);
+      }
+    }
   }
 }
 
 customElements.define("sw-editor", SwEditorElement);
+
+// ---------------------------------------------------------------------------
+// Wire "Create new workflow" button
+// ---------------------------------------------------------------------------
+
+/**
+ * Dispatches the `sw:create` custom event to the `sw-editor` element when the
+ * "Create new workflow" button is activated via click or keyboard.
+ *
+ * This wiring is done at the module level (after `customElements.define`) so
+ * the button can be added to the page HTML without requiring knowledge of the
+ * element's internal API.
+ */
+function wireCreateButton(): void {
+  const createBtn = document.querySelector<HTMLElement>('button[aria-label="Create new workflow"]');
+  const editorEl = document.getElementById("editor");
+
+  if (!createBtn || !editorEl) return;
+
+  const dispatchCreate = (): void => {
+    editorEl.dispatchEvent(new Event("sw:create"));
+  };
+
+  createBtn.addEventListener("click", dispatchCreate);
+  createBtn.addEventListener("keydown", (e: Event) => {
+    const ke = e as KeyboardEvent;
+    if (ke.key === "Enter" || ke.key === " ") {
+      ke.preventDefault();
+      dispatchCreate();
+    }
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", wireCreateButton);
+} else {
+  wireCreateButton();
+}
