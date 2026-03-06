@@ -186,6 +186,7 @@ export class InsertionUI {
     if (this.rendererAdapter?.getEdgeAnchor) {
       const edgeAnchor = this.rendererAdapter.getEdgeAnchor(edgeId);
       if (edgeAnchor) {
+        button.style.position = "absolute";
         button.style.left = `${edgeAnchor.x}px`;
         button.style.top = `${edgeAnchor.y}px`;
       }
@@ -344,6 +345,7 @@ export class InsertionUI {
       const item = document.createElement("button");
       item.type = "button";
       item.setAttribute("role", "menuitem");
+      item.setAttribute("aria-label", `Insert ${taskType.label}`);
       item.className = "sw-task-menu__item";
       item.textContent = taskType.label;
       item.dataset["taskTypeId"] = taskType.id;
