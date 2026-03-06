@@ -7,6 +7,7 @@ import type {
   WorkflowChangedPayload,
 } from "@sw-editor/editor-host-client";
 import { EditorEventName } from "@sw-editor/editor-host-client";
+import type { RendererAdapter, RendererEdgeAnchor } from "@sw-editor/editor-renderer-contract";
 import { describe, expect, it, vi } from "vitest";
 import { EventBridge } from "../../src/events/index.js";
 import type { FocusNodeCallback, SerializeGraphCallback } from "../../src/graph/insertion-ui.js";
@@ -40,6 +41,45 @@ function makeHarness(focusNode?: FocusNodeCallback) {
     focusNode,
   });
   return { graph, counter, eventTarget, bridge, container, ui };
+}
+
+/**
+ * Creates a minimal mock of the renderer adapter with stubbed
+ * `getEdgeAnchor` and `focusNode` methods.
+ */
+function makeMockRendererAdapter(
+  anchorOverride?: RendererEdgeAnchor | null,
+): Pick<RendererAdapter, "getEdgeAnchor" | "focusNode"> & {
+  getEdgeAnchor: ReturnType<typeof vi.fn>;
+  focusNode: ReturnType<typeof vi.fn>;
+} {
+  return {
+    getEdgeAnchor: vi.fn((_edgeId: string) => anchorOverride ?? null),
+    focusNode: vi.fn(),
+  };
+}
+
+/**
+ * Creates a test harness that passes a renderer adapter to InsertionUI,
+ * enabling renderer-anchor–based positioning and focus delegation.
+ */
+function makeHarnessWithAdapter(
+  adapter: Pick<RendererAdapter, "getEdgeAnchor" | "focusNode">,
+) {
+  const graph = bootstrapWorkflowGraph();
+  const counter = new RevisionCounter();
+  const eventTarget = new EventTarget();
+  const bridge = new EventBridge(eventTarget, "0.0.0");
+  const container = document.createElement("div");
+  const ui = new InsertionUI({
+    container,
+    bridge,
+    graph,
+    counter,
+    serializeGraph: makeSerializer(),
+    rendererAdapter: adapter as RendererAdapter,
+  });
+  return { graph, counter, eventTarget, bridge, container, ui, adapter };
 }
 
 describe("MVP_TASK_TYPES", () => {
@@ -315,6 +355,76 @@ describe("InsertionUI", () => {
       ui.dispose();
 
       expect(container.querySelector("[role='menu']")).toBeNull();
+    });
+  });
+
+  describe("renderer-anchor attachment", () => {
+    it("positions the affordance button using RendererEdgeAnchor coordinates", () => {
+      const anchor: RendererEdgeAnchor = {
+        edgeId: INITIAL_EDGE_ID,
+        sourceNodeId: "start",
+        targetNodeId: "end",
+        x: 150,
+        y: 250,
+      };
+      const adapter = makeMockRendererAdapter(anchor);
+      const { ui, container } = makeHarnessWithAdapter(adapter);
+
+      const el = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, el);
+
+      const button = el.querySelector<HTMLButtonElement>("button.sw-insertion-affordance");
+      expect(button).not.toBeNull();
+
+      // The InsertionUI should query the adapter for the anchor position and
+      // apply the coordinates as inline styles on the affordance button.
+      expect(adapter.getEdgeAnchor).toHaveBeenCalledWith(INITIAL_EDGE_ID);
+      expect(button?.style.left).toBe("150px");
+      expect(button?.style.top).toBe("250px");
+    });
+
+    it("uses fallback positioning when getEdgeAnchor returns null", () => {
+      const adapter = makeMockRendererAdapter(null);
+      const { ui } = makeHarnessWithAdapter(adapter);
+
+      const el = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, el);
+
+      const button = el.querySelector<HTMLButtonElement>("button.sw-insertion-affordance");
+      expect(button).not.toBeNull();
+
+      // When no anchor is available, the button should not have explicit
+      // coordinate-based positioning (falling back to CSS/layout defaults).
+      expect(adapter.getEdgeAnchor).toHaveBeenCalledWith(INITIAL_EDGE_ID);
+      expect(button?.style.left).toBe("");
+      expect(button?.style.top).toBe("");
+    });
+
+    it("invokes the adapter focusNode callback after insertion", async () => {
+      const anchor: RendererEdgeAnchor = {
+        edgeId: INITIAL_EDGE_ID,
+        sourceNodeId: "start",
+        targetNodeId: "end",
+        x: 100,
+        y: 200,
+      };
+      const adapter = makeMockRendererAdapter(anchor);
+      const { ui, container } = makeHarnessWithAdapter(adapter);
+
+      ui.activateInsertion(INITIAL_EDGE_ID);
+
+      // biome-ignore lint/style/noNonNullAssertion: activateInsertion always renders menu items
+      const firstItem = container.querySelector<HTMLButtonElement>("[role='menuitem']")!;
+      firstItem.click();
+
+      // Allow any microtasks to complete.
+      await Promise.resolve();
+
+      expect(adapter.focusNode).toHaveBeenCalledOnce();
+      // The adapter's focusNode receives a FocusTarget object with the new node ID.
+      const call = adapter.focusNode.mock.calls[0][0];
+      expect(call).toHaveProperty("nodeId");
+      expect(typeof call.nodeId).toBe("string");
     });
   });
 });
