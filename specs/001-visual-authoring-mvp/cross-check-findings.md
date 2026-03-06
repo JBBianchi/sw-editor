@@ -220,14 +220,15 @@
 
 ### SC-001 — A new user can create and export a valid workflow in under 10 minutes
 
-**Status**: PARTIALLY COVERED
+**Status**: PARTIALLY COVERED (infrastructure gap closed; component not yet fully implemented)
 
 **Evidence**:
 - The technical path (bootstrap → insert task → serialize to JSON/YAML) is implemented and confirmed by unit and integration tests.
 - `tests/integration/quickstart-scenarios.spec.ts` — Scenarios 1 and 2 cover the create-and-export mechanics.
-- **Gap**: No e2e test measures or asserts actual UX time-to-complete. The Playwright e2e suite (`tests/e2e/accessibility-mvp.spec.ts`) was not run due to requiring a live server (Finding F001 from T094). SC-001 is a UX/usability criterion; passing integration tests confirm the code path works but cannot substitute for an end-to-end UX timing assertion.
+- `playwright.config.ts` now configures `webServer` (added in task #141) and `demo/vite.config.ts` aliases all workspace packages from source (fixed in task #126), so `pnpm test:e2e` starts the demo automatically — GAP-001 is closed at the infrastructure level.
+- **Remaining gap**: The keyboard-operability tests in `tests/e2e/accessibility-mvp.spec.ts` that walk the create+export flow are marked `test.describe.fixme` / `test.fixme` because the `sw-editor` custom element does not yet expose the required DOM affordances (new-workflow button, graph nodes with `data-node-type`, export button). SC-001 will be fully verifiable once those affordances are implemented.
 
-**Suggested resolution**: Run `tests/e2e/accessibility-mvp.spec.ts` against a `pnpm build && pnpm preview` serve. If the scenario is not covered by that file, add a Playwright test that walks through the create-and-export path. Track as a separate follow-up issue if e2e automation is required.
+**Resolution status**: Infrastructure complete. Component implementation required to remove `fixme` markers.
 
 ---
 
@@ -285,15 +286,14 @@
 
 ### SC-007 — A new contributor can bootstrap the repository and run lint, unit/integration tests, and e2e smoke checks in under 15 minutes
 
-**Status**: PARTIALLY COVERED
+**Status**: CONFIRMED COVERED (infrastructure gap closed)
 
 **Evidence**:
 - Toolchain fully pinned: Node.js ≥24, pnpm 10.30.3, biome 2.4.5, vitest 4.0.18, playwright 1.58.2 (FR-016, FR-017, FR-018 all confirmed).
-- `pnpm install` + `npx vitest run` executes all 356 unit/contract/integration tests successfully.
+- `pnpm install` + `pnpm test` executes all unit/contract/integration tests successfully.
 - `biome check .` is available for lint.
-- **Gap**: The e2e smoke check (Playwright) requires `pnpm build && pnpm preview` before `npx playwright test`. There is no `webServer` configuration in `playwright.config.ts` to automate this step (Finding F001 from T094). A new contributor would need to know to start the dev server manually, which adds friction and may exceed the 15-minute target on slower machines.
-
-**Suggested resolution**: Add `webServer` configuration to `playwright.config.ts` (or a `pnpm test:e2e` script that builds, serves, and runs Playwright) so the e2e smoke check is a single command. This is a low-effort improvement. Track as a separate follow-up issue or implement in a follow-on task.
+- `pnpm test:e2e` now builds and starts the demo server automatically via `webServer` in `playwright.config.ts` (task #141) with the `demo/` Vite alias fix (task #126) — a new contributor can run `pnpm test:e2e` as a single command with no manual server setup. GAP-001 is closed.
+- E2e tests that require the full `sw-editor` component are marked `test.fixme` and do not block the smoke-check run.
 
 ---
 
@@ -328,25 +328,29 @@
 
 | ID | Criterion | Status |
 |----|-----------|--------|
-| SC-001 | Create+export in <10 min | PARTIAL — e2e not run |
+| SC-001 | Create+export in <10 min | PARTIAL — infrastructure fixed; component pending |
 | SC-002 | Validation feedback <500ms at p95 | CONFIRMED |
 | SC-003 | Round-trip correctness ≥95% of fixtures | CONFIRMED |
 | SC-004 | One element + one init step | CONFIRMED |
 | SC-005 | 100% renderer parity | CONFIRMED |
 | SC-006 | One-step setup per renderer bundle | CONFIRMED |
-| SC-007 | Contributor bootstrap <15 min | PARTIAL — e2e requires manual server start |
+| SC-007 | Contributor bootstrap <15 min | CONFIRMED — GAP-001 closed (tasks #141, #126) |
 
-**5 of 7 SCs are fully covered by passing tests. 2 SCs (SC-001, SC-007) are partially covered; both share the same root gap: Playwright e2e tests require a live dev server that is not started automatically.**
+**6 of 7 SCs are fully covered. SC-001 infrastructure gap is closed; remaining coverage requires full `sw-editor` component implementation.**
 
 ### Gaps Requiring Action
 
-#### GAP-001 — E2E tests not automatable without build+serve step (SC-001, SC-007)
+#### GAP-001 — E2E tests not automatable without build+serve step (SC-001, SC-007) — CLOSED
 
 **Requirement IDs affected**: SC-001, SC-007
 
-**What is missing**: `playwright.config.ts` does not configure `webServer`, so `npx playwright test` requires the developer to manually run `pnpm build && pnpm preview` first. SC-001 (UX timing) and SC-007 (contributor onboarding) cannot be fully verified without a running e2e suite.
+**Resolution** (tasks #141 and #126):
+- `playwright.config.ts` now has a `webServer` block that runs `pnpm --filter @sw-editor/demo build && pnpm --filter @sw-editor/demo preview` and waits for `http://localhost:4173`.
+- `demo/vite.config.ts` adds aliases for `@sw-editor/editor-core` and `@sw-editor/editor-host-client/rete-lit` (following the same pattern as `example/vanilla-js/vite.config.ts`) so the demo builds from TypeScript source without a separate package build step.
+- `pnpm test:e2e` now starts the demo automatically.  Tests that require the full `sw-editor` component are marked `test.fixme`; structural smoke tests (ARIA landmarks, live-region presence) are left active.
 
-**Suggested resolution**: Add `webServer: { command: 'pnpm build && pnpm preview', url: 'http://localhost:4173' }` to `playwright.config.ts`, or create a top-level `pnpm test:e2e` script that chains the steps. This is a self-contained change that can be implemented now or tracked as a child issue.
+**SC-007 status**: CONFIRMED COVERED.
+**SC-001 status**: Infrastructure complete; full coverage requires `sw-editor` component implementation (remove `test.fixme` markers at that point).
 
 ---
 
