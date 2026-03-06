@@ -29,6 +29,9 @@ importers:
       '@sw-editor/editor-host-client':
         specifier: workspace:*
         version: link:../../packages/editor-host-client
+      '@sw-editor/editor-renderer-react-flow':
+        specifier: workspace:*
+        version: link:../../packages/editor-renderer-react-flow
     devDependencies:
       typescript:
         specifier: 5.9.3
