@@ -7,3 +7,4 @@ packages:
   - "packages/editor-renderer-react-flow"
   - "example/vanilla-js"
   - "example/host-events"
+  - "demo"
