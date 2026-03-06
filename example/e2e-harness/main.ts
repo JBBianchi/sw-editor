@@ -540,3 +540,33 @@ function wireDiagnostics(): void {
 }
 
 wireDiagnostics();
+
+// ---------------------------------------------------------------------------
+// Renderer switcher wiring
+// ---------------------------------------------------------------------------
+
+/**
+ * Wires the `#renderer-select` element so that choosing a renderer updates
+ * the `?renderer=` URL search parameter and reloads the page.
+ *
+ * Also sets the select's initial value from the current URL parameter so the
+ * control reflects the active renderer on page load.
+ */
+function wireRendererSelect(): void {
+  const select = document.querySelector<HTMLSelectElement>("#renderer-select");
+  if (!select) return;
+
+  // Reflect the active renderer in the select on page load.
+  const current = new URLSearchParams(location.search).get("renderer");
+  if (current === "react-flow" || current === "rete-lit") {
+    select.value = current;
+  }
+
+  select.addEventListener("change", () => {
+    const params = new URLSearchParams(location.search);
+    params.set("renderer", select.value);
+    location.search = params.toString();
+  });
+}
+
+wireRendererSelect();
