@@ -359,7 +359,7 @@ describe("InsertionUI", () => {
 
   describe("sequential insertion", () => {
     it("inserting twice produces two new edges with affordance buttons", async () => {
-      const { ui, container, eventTarget, graph } = makeHarness();
+      const { ui, container, eventTarget } = makeHarness();
 
       // --- First insertion on the initial edge ---
       ui.activateInsertion(INITIAL_EDGE_ID);
@@ -373,7 +373,7 @@ describe("InsertionUI", () => {
 
       // After the first insertion the original edge (__start__->__end__) is gone
       // and replaced by two new edges: __start__->task and task->__end__.
-      const graphAfterFirst = ui["graph"];
+      const graphAfterFirst = ui.graph;
       expect(graphAfterFirst.edges.length).toBe(2);
 
       // Attach affordances for the two new edges.
@@ -398,7 +398,7 @@ describe("InsertionUI", () => {
 
       // After the second insertion, graph should have 3 edges total
       // (edge1 was split into 2, plus edge2 is still present).
-      const graphAfterSecond = ui["graph"];
+      const graphAfterSecond = ui.graph;
       expect(graphAfterSecond.edges.length).toBe(3);
       // And the original edge1 should no longer exist.
       expect(graphAfterSecond.edges.find((e) => e.id === edge1.id)).toBeUndefined();
@@ -410,7 +410,13 @@ describe("InsertionUI", () => {
       // Return distinct anchor coordinates for each call so we can verify recalculation.
       adapter.getEdgeAnchor.mockImplementation((edgeId: string) => {
         callCount++;
-        return { edgeId, sourceNodeId: "s", targetNodeId: "t", x: callCount * 100, y: callCount * 50 };
+        return {
+          edgeId,
+          sourceNodeId: "s",
+          targetNodeId: "t",
+          x: callCount * 100,
+          y: callCount * 50,
+        };
       });
 
       const { ui, container, eventTarget } = makeHarnessWithAdapter(adapter);
@@ -425,7 +431,7 @@ describe("InsertionUI", () => {
       container.querySelector<HTMLButtonElement>("[role='menuitem']")!.click();
       await firstChanged;
 
-      const graphAfterFirst = ui["graph"];
+      const graphAfterFirst = ui.graph;
       const [edgeA, edgeB] = graphAfterFirst.edges;
 
       // Reset call count to track fresh anchor queries.
@@ -459,7 +465,7 @@ describe("InsertionUI", () => {
       container.querySelector<HTMLButtonElement>("[role='menuitem']")!.click();
       await secondChanged;
 
-      const graphAfterSecond = ui["graph"];
+      const graphAfterSecond = ui.graph;
       adapter.getEdgeAnchor.mockClear();
       callCount = 0;
 
@@ -504,7 +510,7 @@ describe("InsertionUI", () => {
       expect(initialAnchor.querySelector("button.sw-insertion-affordance")).toBeNull();
 
       // Attach the two new edges.
-      const graphAfter = ui["graph"];
+      const graphAfter = ui.graph;
       const anchors = graphAfter.edges.map((edge) => {
         const el = document.createElement("div");
         ui.attachToEdge(edge.id, el);
@@ -529,7 +535,7 @@ describe("InsertionUI", () => {
         y: 250,
       };
       const adapter = makeMockRendererAdapter(anchor);
-      const { ui, container } = makeHarnessWithAdapter(adapter);
+      const { ui } = makeHarnessWithAdapter(adapter);
 
       const el = document.createElement("div");
       ui.attachToEdge(INITIAL_EDGE_ID, el);

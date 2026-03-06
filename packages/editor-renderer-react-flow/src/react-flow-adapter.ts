@@ -164,7 +164,8 @@ function nodePosition(index: number): { x: number; y: number } {
 function computeLayoutPositions(graph: WorkflowGraph): Map<string, { x: number; y: number }> {
   const positions = new Map<string, { x: number; y: number }>();
   for (let i = 0; i < graph.nodes.length; i++) {
-    const node = graph.nodes[i]!;
+    const node = graph.nodes[i];
+    if (!node) continue;
     positions.set(node.id, nodePosition(i));
   }
   return positions;
@@ -224,7 +225,7 @@ function toRFGraph(graph: WorkflowGraph): {
 } {
   const positions = computeLayoutPositions(graph);
   return {
-    nodes: graph.nodes.map((n) => toRFNode(n, positions.get(n.id)!)),
+    nodes: graph.nodes.map((n) => toRFNode(n, positions.get(n.id) ?? { x: 0, y: 0 })),
     edges: graph.edges.map((e) => toRFEdge(e)),
     positions,
   };

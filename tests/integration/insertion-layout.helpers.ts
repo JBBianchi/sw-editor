@@ -12,15 +12,14 @@ import { extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  bootstrapWorkflowGraph,
   type InsertTaskResult,
+  insertTask,
+  parseWorkflowSource,
+  projectWorkflowToGraph,
   RevisionCounter,
   type WorkflowGraph,
   type WorkflowSource,
-  bootstrapWorkflowGraph,
-  insertTask,
-  loadWorkflow,
-  projectWorkflowToGraph,
-  parseWorkflowSource,
 } from "@sw-editor/editor-core";
 
 // ---------------------------------------------------------------------------

@@ -7,7 +7,7 @@
  * @module
  */
 
-import { INITIAL_EDGE_ID, START_NODE_ID, END_NODE_ID } from "@sw-editor/editor-core";
+import { END_NODE_ID, INITIAL_EDGE_ID, START_NODE_ID } from "@sw-editor/editor-core";
 import { describe, expect, it } from "vitest";
 
 import {

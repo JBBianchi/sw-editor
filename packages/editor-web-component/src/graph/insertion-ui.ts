@@ -348,6 +348,7 @@ export class InsertionUI {
       item.setAttribute("aria-label", `Insert ${taskType.label}`);
       item.className = "sw-task-menu__item";
       item.textContent = taskType.label;
+      // biome-ignore lint/complexity/useLiteralKeys: TypeScript requires bracket notation for index signatures
       item.dataset["taskTypeId"] = taskType.id;
 
       item.addEventListener("click", () => {

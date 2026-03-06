@@ -32,8 +32,7 @@ const NEW_WORKFLOW_BUTTON_SELECTOR = 'button[aria-label="Create new workflow"]';
 const INSERTION_BUTTON_SELECTOR = 'button[aria-label="Insert task"]';
 
 /** Task type selection menu opened by an insertion affordance. */
-const TASK_MENU_SELECTOR =
-  '[role="menu"][aria-label="Select task type to insert"]';
+const TASK_MENU_SELECTOR = '[role="menu"][aria-label="Select task type to insert"]';
 
 /** Individual task type entries within the open menu. */
 const TASK_MENU_ITEM_SELECTOR = '[role="menuitem"]';
@@ -78,9 +77,7 @@ async function insertTaskViaAffordance(
   affordanceIndex: number,
   menuItemIndex: number,
 ): Promise<void> {
-  const affordance = page
-    .locator(INSERTION_BUTTON_SELECTOR)
-    .nth(affordanceIndex);
+  const affordance = page.locator(INSERTION_BUTTON_SELECTOR).nth(affordanceIndex);
   await affordance.press("Enter");
 
   await expect(page.locator(TASK_MENU_SELECTOR)).toBeVisible();
@@ -102,9 +99,7 @@ test.describe("Insertion layout ordering (US1)", () => {
     await createNewWorkflow(page);
   });
 
-  test("inserted node appears in the graph between predecessor and successor", async ({
-    page,
-  }) => {
+  test("inserted node appears in the graph between predecessor and successor", async ({ page }) => {
     // Before insertion: the bootstrapped graph has start → end with one edge
     // and one insertion affordance. No task nodes exist yet.
     await expect(page.locator(GRAPH_NODE_SELECTOR)).toHaveCount(0);
@@ -134,9 +129,7 @@ test.describe("Insertion layout ordering (US1)", () => {
     await expect(affordances).toHaveCount(2);
   });
 
-  test("DOM order of graph-node markers matches insertion sequence", async ({
-    page,
-  }) => {
+  test("DOM order of graph-node markers matches insertion sequence", async ({ page }) => {
     // Insert first task (Call Task — index 0 in menu) on the start→end edge.
     await insertTaskViaAffordance(page, 0, 0);
 

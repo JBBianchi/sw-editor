@@ -612,8 +612,12 @@ describe("Quickstart Scenario 6 — Load, Insert, Verify Visual Order", () => {
     expect(nodeIds[1]).toBe(result.nodeId);
 
     // Verify the full connectivity chain: start → task → end.
-    const edgeToTask = result.graph.edges.find((e) => e.source === START_NODE_ID && e.target === result.nodeId);
-    const edgeFromTask = result.graph.edges.find((e) => e.source === result.nodeId && e.target === END_NODE_ID);
+    const edgeToTask = result.graph.edges.find(
+      (e) => e.source === START_NODE_ID && e.target === result.nodeId,
+    );
+    const edgeFromTask = result.graph.edges.find(
+      (e) => e.source === result.nodeId && e.target === END_NODE_ID,
+    );
     expect(edgeToTask).toBeDefined();
     expect(edgeFromTask).toBeDefined();
   });

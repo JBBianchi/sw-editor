@@ -13,15 +13,13 @@
  */
 
 import {
-  type GraphEdge,
-  type GraphNode,
-  type WorkflowGraph,
-  INITIAL_EDGE_ID,
-  START_NODE_ID,
-  END_NODE_ID,
-  RevisionCounter,
   bootstrapWorkflowGraph,
+  END_NODE_ID,
+  type GraphEdge,
+  INITIAL_EDGE_ID,
   insertTask,
+  RevisionCounter,
+  type WorkflowGraph,
 } from "@sw-editor/editor-core";
 import type { RendererEdgeAnchor } from "@sw-editor/editor-renderer-contract";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -210,9 +208,7 @@ function realignAnchorsAfterViewportTransform(
  */
 function measureInsertAndSettle(graph: WorkflowGraph): number {
   // Pick a random interior edge to insert on (avoid cross-edges for simplicity).
-  const linearEdges = graph.edges.filter(
-    (e) => !e.id.startsWith("cross-"),
-  );
+  const linearEdges = graph.edges.filter((e) => !e.id.startsWith("cross-"));
   const targetEdge = linearEdges[Math.floor(Math.random() * linearEdges.length)];
 
   const counter = new RevisionCounter();
