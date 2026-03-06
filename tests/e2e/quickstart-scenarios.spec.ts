@@ -277,54 +277,153 @@ test.describe("Quickstart Scenario 3: Load Existing YAML", () => {
 // Scenario 4: Diagnostics Flow
 // ---------------------------------------------------------------------------
 
-test.describe
-  .fixme("Quickstart Scenario 4: Diagnostics Flow", () => {
-    test.beforeEach(async ({ page }) => {
+/** Selector for the source textarea added in the demo harness. */
+const SOURCE_INPUT_SELECTOR = 'textarea[aria-label="Workflow source"]';
+
+/**
+ * Selectors for the diagnostics output region added in the demo harness.
+ * Matches by aria-label (case-insensitive partial) or data-testid.
+ */
+const DIAGNOSTICS_REGION_SELECTOR =
+  '[aria-label*="diagnostics" i], [aria-label*="validation" i], [data-testid="diagnostics-live-region"]';
+
+/** Debounce delay used by the demo harness validation wiring (ms). */
+const SOURCE_DEBOUNCE_MS = 500;
+
+test.describe("Quickstart Scenario 4: Diagnostics Flow", () => {
+  /**
+   * Verifies that the diagnostics region is present in the DOM when the
+   * editor host page is loaded.  The region is rendered by the demo harness
+   * independently of any user interaction.
+   *
+   * Quickstart step: "Verify diagnostics event and local/global UI cues."
+   */
+  test("diagnostics region is attached on page load", async ({ page }) => {
+    await openEditor(page);
+
+    const diagnosticsRegion = page.locator(DIAGNOSTICS_REGION_SELECTOR).first();
+    await expect(diagnosticsRegion).toBeAttached();
+  });
+
+  /**
+   * Verifies that pasting invalid JSON into the source textarea causes the
+   * diagnostics region to become non-empty after the debounce window elapses.
+   *
+   * Quickstart steps:
+   *   1. "Enter an invalid transition target." (here: paste invalid JSON)
+   *   2. "Wait for debounce window."
+   *   3. "Verify diagnostics event and local/global UI cues."
+   *
+   * Expected outcome: "diagnostics update consistently for live and full
+   * validation."
+   */
+  test("pasting invalid JSON into the source input shows diagnostics", async ({ page }) => {
+    await openEditor(page);
+
+    const sourceInput = page.locator(SOURCE_INPUT_SELECTOR);
+    await sourceInput.fill('{ "notAWorkflow": true }');
+
+    // Allow the debounce window to elapse before asserting.
+    await page.waitForTimeout(SOURCE_DEBOUNCE_MS + 100);
+
+    const diagnosticsRegion = page.locator(DIAGNOSTICS_REGION_SELECTOR).first();
+    await expect(diagnosticsRegion).toBeAttached();
+    await expect(diagnosticsRegion).not.toBeEmpty();
+  });
+
+  /**
+   * Verifies that clearing the source input after entering invalid content
+   * resets the diagnostics region to empty.
+   *
+   * Quickstart step: continuity of "diagnostics update consistently."
+   */
+  test("clearing the source input resets the diagnostics region", async ({ page }) => {
+    await openEditor(page);
+
+    const sourceInput = page.locator(SOURCE_INPUT_SELECTOR);
+    // First introduce an error.
+    await sourceInput.fill('{ "notAWorkflow": true }');
+    await page.waitForTimeout(SOURCE_DEBOUNCE_MS + 100);
+
+    // Then clear — diagnostics should disappear.
+    await sourceInput.fill("");
+    await page.waitForTimeout(SOURCE_DEBOUNCE_MS + 100);
+
+    const diagnosticsRegion = page.locator(DIAGNOSTICS_REGION_SELECTOR).first();
+    await expect(diagnosticsRegion).toBeEmpty();
+  });
+
+  /**
+   * Verifies that entering an invalid transition target via the properties
+   * panel triggers the diagnostics region.
+   *
+   * Marked fixme: the properties panel transition input is not yet rendered by
+   * the demo harness.  Remove fixme once the panel and transition field land.
+   *
+   * Quickstart step: "Enter an invalid transition target."
+   */
+  test.fixme(
+    "entering an invalid transition target triggers a diagnostics event",
+    async ({ page }) => {
       await openEditor(page);
       const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
       await newWorkflowBtn.press("Enter");
-    });
 
-    test("entering an invalid transition target triggers a diagnostics event", async ({ page }) => {
       const panel = page.locator(PROPERTY_PANEL_SELECTOR);
       const transitionInput = panel
         .locator('[aria-label*="transition" i], [data-field="transition"]')
         .first();
       await transitionInput.fill("__invalid_target__");
 
-      // Wait for the debounce window and diagnostic update.
-      const diagnosticsRegion = page
-        .locator(
-          '[aria-label*="diagnostics" i], [aria-label*="validation" i], [data-testid="diagnostics-live-region"]',
-        )
-        .first();
+      const diagnosticsRegion = page.locator(DIAGNOSTICS_REGION_SELECTOR).first();
       await expect(diagnosticsRegion).toBeAttached();
-    });
+    },
+  );
 
-    test("diagnostic error is reflected in local UI cues on the node", async ({ page }) => {
+  /**
+   * Verifies that a node-level error indicator appears when an invalid
+   * transition target is entered.
+   *
+   * Marked fixme: node error indicators are not yet rendered by the demo
+   * harness.  Remove fixme once the graph node error UI lands.
+   */
+  test.fixme(
+    "diagnostic error is reflected in local UI cues on the node",
+    async ({ page }) => {
+      await openEditor(page);
+      const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
+      await newWorkflowBtn.press("Enter");
+
       const panel = page.locator(PROPERTY_PANEL_SELECTOR);
       const transitionInput = panel
         .locator('[aria-label*="transition" i], [data-field="transition"]')
         .first();
       await transitionInput.fill("__invalid_target__");
 
-      // A node-level error indicator should appear on the graph.
       const errorIndicator = page
         .locator('[data-testid="node-error"], [aria-label*="error" i]')
         .first();
       await expect(errorIndicator).toBeVisible();
-    });
+    },
+  );
 
-    test("explicit validation surfaces global error summary", async ({ page }) => {
-      const validateBtn = page.locator('button[aria-label="Validate workflow"]');
-      await validateBtn.press("Enter");
+  /**
+   * Verifies that explicit validation surfaces a global error summary.
+   *
+   * Marked fixme: the "Validate workflow" button and error summary panel are
+   * not yet rendered by the demo harness.  Remove fixme once they land.
+   */
+  test.fixme("explicit validation surfaces global error summary", async ({ page }) => {
+    await openEditor(page);
+    const validateBtn = page.locator('button[aria-label="Validate workflow"]');
+    await validateBtn.press("Enter");
 
-      const errorSummary = page.locator(
-        '[aria-label="Editor errors"], [data-testid="validation-summary"]',
-      );
-      await expect(errorSummary).toBeVisible();
-    });
+    const errorSummary = page.locator(
+      '[aria-label="Editor errors"], [data-testid="validation-summary"]',
+    );
+    await expect(errorSummary).toBeVisible();
   });
+});
 
 // ---------------------------------------------------------------------------
 // Scenario 5: Privacy Guardrail

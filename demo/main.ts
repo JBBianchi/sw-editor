@@ -14,6 +14,7 @@ import {
   bootstrapWorkflowGraph,
   parseWorkflowSource,
   projectWorkflowToGraph,
+  validateWorkflow,
 } from "@sw-editor/editor-core";
 import { ReteLitAdapter } from "@sw-editor/editor-host-client/rete-lit";
 
@@ -81,3 +82,61 @@ class SwEditorElement extends HTMLElement {
 }
 
 customElements.define("sw-editor", SwEditorElement);
+
+// ---------------------------------------------------------------------------
+// Source input + diagnostics wiring
+// ---------------------------------------------------------------------------
+
+/**
+ * Debounce delay (ms) between the last keystroke in the source textarea and
+ * the validation run.  Mirrors the default used by {@link LiveValidator}.
+ */
+const SOURCE_DEBOUNCE_MS = 500;
+
+/**
+ * Wires the source textarea to the diagnostics region.
+ *
+ * Reads the textarea value on each `input` event, debounces by
+ * {@link SOURCE_DEBOUNCE_MS}, infers the source format (JSON when the
+ * content begins with `{` or `[`, YAML otherwise), calls
+ * {@link validateWorkflow}, and renders any diagnostics to the region.
+ */
+function wireDiagnostics(): void {
+  const sourceInput = document.querySelector<HTMLTextAreaElement>(
+    'textarea[aria-label="Workflow source"]',
+  );
+  const diagnosticsRegion = document.querySelector<HTMLElement>(
+    '[data-testid="diagnostics-live-region"]',
+  );
+
+  if (!sourceInput || !diagnosticsRegion) return;
+
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  sourceInput.addEventListener("input", () => {
+    if (debounceTimer !== null) clearTimeout(debounceTimer);
+
+    debounceTimer = setTimeout(() => {
+      const content = sourceInput.value.trim();
+      if (!content) {
+        diagnosticsRegion.textContent = "";
+        return;
+      }
+
+      const format =
+        content.startsWith("{") || content.startsWith("[") ? "json" : "yaml";
+
+      const diagnostics = validateWorkflow({ format, content });
+
+      if (diagnostics.length === 0) {
+        diagnosticsRegion.textContent = "";
+      } else {
+        diagnosticsRegion.textContent = diagnostics
+          .map((d) => `${d.severity.toUpperCase()}: ${d.message}`)
+          .join("\n");
+      }
+    }, SOURCE_DEBOUNCE_MS);
+  });
+}
+
+wireDiagnostics();

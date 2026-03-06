@@ -21,6 +21,27 @@
       <div aria-live="polite" aria-atomic="true" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"></div>
     </main>
 
+    <!-- Source editor: paste YAML or JSON for live diagnostics — used by Scenario 4 e2e tests -->
+    <section style="padding:0.5rem;display:flex;flex-direction:column;gap:0.25rem;">
+      <label for="source-input" style="font-size:0.75rem;font-weight:600;">Workflow source (YAML / JSON)</label>
+      <textarea
+        id="source-input"
+        aria-label="Workflow source"
+        rows="6"
+        style="font-family:monospace;font-size:0.75rem;resize:vertical;width:100%;padding:0.25rem;"
+        placeholder="Paste YAML or JSON workflow here…"
+      ></textarea>
+      <!-- Diagnostics output — updated by validation wiring in main.ts -->
+      <div
+        id="diagnostics"
+        aria-label="Diagnostics"
+        data-testid="diagnostics-live-region"
+        aria-live="assertive"
+        aria-atomic="true"
+        style="min-height:1.5rem;font-size:0.75rem;color:#c0392b;white-space:pre-wrap;"
+      ></div>
+    </section>
+
     <!-- Load workflow source panel — used by Scenario 3 e2e tests -->
     <section aria-label="Load workflow source" style="padding:8px;border-top:1px solid #ccc;">
       <label for="yaml-source" style="display:block;margin-bottom:4px;font-size:0.875rem;">YAML source</label>
