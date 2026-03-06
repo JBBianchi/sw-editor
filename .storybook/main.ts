@@ -11,6 +11,9 @@ import { resolve } from "node:path";
 import type { StorybookConfig } from "@storybook/react-vite";
 
 const config: StorybookConfig = {
+  core: {
+    disableTelemetry: true
+  },
   stories: ["../packages/**/*.stories.@(ts|tsx)"],
   addons: [
     "@storybook/addon-links",
