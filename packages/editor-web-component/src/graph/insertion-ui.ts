@@ -1,6 +1,7 @@
 import type { RevisionCounter, WorkflowGraph } from "@sw-editor/editor-core";
 import { type InsertTaskOptions, type InsertTaskResult, insertTask } from "@sw-editor/editor-core";
 import type { WorkflowSource } from "@sw-editor/editor-host-client";
+import type { RendererAdapter } from "@sw-editor/editor-renderer-contract";
 import type { EventBridge } from "../events/bridge.js";
 
 // ---------------------------------------------------------------------------
@@ -106,6 +107,7 @@ export class InsertionUI {
   private readonly counter: RevisionCounter;
   private readonly serializeGraph: SerializeGraphCallback;
   private readonly focusNode: FocusNodeCallback | undefined;
+  private readonly rendererAdapter: RendererAdapter | undefined;
 
   /** Live graph reference; must be kept current by the host. */
   private graph: WorkflowGraph;
@@ -134,6 +136,8 @@ export class InsertionUI {
    *   to a {@link WorkflowSource} for the `workflowChanged` event payload.
    * @param options.focusNode - Optional renderer callback that moves DOM focus
    *   to the node with the given ID.
+   * @param options.rendererAdapter - Optional {@link RendererAdapter} used to
+   *   query edge anchors for positioning and to delegate focus after insertion.
    */
   constructor(options: {
     container: HTMLElement;
@@ -142,6 +146,7 @@ export class InsertionUI {
     counter: RevisionCounter;
     serializeGraph: SerializeGraphCallback;
     focusNode?: FocusNodeCallback;
+    rendererAdapter?: RendererAdapter;
   }) {
     this.container = options.container;
     this.bridge = options.bridge;
@@ -149,6 +154,7 @@ export class InsertionUI {
     this.counter = options.counter;
     this.serializeGraph = options.serializeGraph;
     this.focusNode = options.focusNode;
+    this.rendererAdapter = options.rendererAdapter;
   }
 
   // ---------------------------------------------------------------------------
@@ -173,6 +179,18 @@ export class InsertionUI {
     this.detachFromEdge(edgeId);
 
     const button = this.createAffordanceButton(edgeId);
+
+    // Position the button at the edge midpoint when the renderer adapter
+    // provides anchor coordinates.
+    if (this.rendererAdapter?.getEdgeAnchor) {
+      const edgeAnchor = this.rendererAdapter.getEdgeAnchor(edgeId);
+      if (edgeAnchor) {
+        button.style.position = "absolute";
+        button.style.left = `${edgeAnchor.x}px`;
+        button.style.top = `${edgeAnchor.y}px`;
+      }
+    }
+
     anchor.appendChild(button);
     this.affordances.set(edgeId, button);
 
@@ -326,6 +344,7 @@ export class InsertionUI {
       const item = document.createElement("button");
       item.type = "button";
       item.setAttribute("role", "menuitem");
+      item.setAttribute("aria-label", `Insert ${taskType.label}`);
       item.className = "sw-task-menu__item";
       item.textContent = taskType.label;
       item.dataset["taskTypeId"] = taskType.id;
@@ -428,6 +447,10 @@ export class InsertionUI {
 
     // Move DOM focus to the new node so the user can immediately edit it
     // without lifting their hands from the keyboard (FR-005).
-    this.focusNode?.(result.nodeId);
+    if (this.rendererAdapter?.focusNode) {
+      this.rendererAdapter.focusNode({ nodeId: result.nodeId, behavior: "center" });
+    } else {
+      this.focusNode?.(result.nodeId);
+    }
   }
 }
