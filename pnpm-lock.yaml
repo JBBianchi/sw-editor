@@ -23,6 +23,9 @@ importers:
 
   demo:
     dependencies:
+      '@sw-editor/editor-core':
+        specifier: workspace:*
+        version: link:../packages/editor-core
       '@sw-editor/editor-host-client':
         specifier: workspace:*
         version: link:../packages/editor-host-client

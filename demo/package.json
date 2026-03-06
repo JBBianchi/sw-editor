@@ -9,6 +9,7 @@
     "preview": "vite preview --port 4173"
   },
   "dependencies": {
+    "@sw-editor/editor-core": "workspace:*",
     "@sw-editor/editor-host-client": "workspace:*"
   },
   "devDependencies": {
