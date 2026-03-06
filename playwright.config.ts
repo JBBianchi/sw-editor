@@ -26,4 +26,10 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
+  webServer: {
+    command:
+      "pnpm --filter @sw-editor/demo build && pnpm --filter @sw-editor/demo preview",
+    url: "http://localhost:4173",
+    reuseExistingServer: !process.env.CI,
+  },
 });
