@@ -10,6 +10,7 @@ This repository now uses GitHub Spec Kit feature packages under `specs/`.
 | [`002-nested-tasks-ux`](002-nested-tasks-ux/) | Planned | Visual authoring support for nested task structures with expanded default rendering. |
 | [`003-branching-control-flow`](003-branching-control-flow/) | Planned | Panel-driven authoring for transition, if, switch, fork, and try-catch behavior with route projection. |
 | [`004-extensibility-customization`](004-extensibility-customization/) | Planned | Plugin architecture for custom rendering, validation, commands, and slot-based UI extensions. |
+| [`005-align-example-demo`](005-align-example-demo/) | Draft | Unify `demo/` and `example/` directories: rename `demo/` to `example/e2e-harness/` with package `@sw-editor/example-e2e-harness`. |
 
 Each feature package contains:
 
