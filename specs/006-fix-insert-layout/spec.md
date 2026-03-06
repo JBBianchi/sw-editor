@@ -2,7 +2,7 @@
 
 **Feature Branch**: `006-fix-insert-layout`  
 **Created**: 2026-03-06  
-**Status**: Ready for Implementation  
+**Status**: Implementation Complete  
 **Input**: User description: "The layouting consideration seems off. The (+) button between node should be placed along the edge between two nodes, and after adding a node, it's not appended between (start and end for instance) but "after" end (the edges are OK, it's just the layouting of the nodes, not their relation/link)"
 
 ## User Scenarios & Testing *(mandatory)*
