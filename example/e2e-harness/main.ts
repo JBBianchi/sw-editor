@@ -1,9 +1,11 @@
 /**
  * Demo entry point — registers the `sw-editor` custom element.
  *
- * Imports the `rete-lit` renderer backend from `@sw-editor/editor-host-client`
- * and defines the `<sw-editor>` custom element. The element bootstraps an empty
- * workflow graph (start → end), mounts the rete-lit renderer, and attaches
+ * Imports both renderer backends from `@sw-editor/editor-host-client` and
+ * defines the `<sw-editor>` custom element. The active renderer is chosen at
+ * runtime via the `?renderer=` URL search parameter (values: `"react-flow"` |
+ * `"rete-lit"`, default `"rete-lit"`). The element bootstraps an empty
+ * workflow graph (start → end), mounts the selected renderer, and attaches
  * insertion affordance buttons for each graph edge so that Scenario 2 of the
  * quickstart can be exercised end-to-end.
  *
@@ -24,6 +26,7 @@ import {
   validateWorkflow,
 } from "@sw-editor/editor-core";
 import { ReteLitAdapter } from "@sw-editor/editor-host-client/rete-lit";
+import { ReactFlowAdapter } from "@sw-editor/editor-host-client/react-flow";
 
 // ---------------------------------------------------------------------------
 // Task type catalogue (mirrors InsertionUI.MVP_TASK_TYPES)
@@ -89,7 +92,7 @@ const MVP_TASK_TYPES: readonly TaskTypeDescriptor[] = [
  */
 class SwEditorElement extends HTMLElement {
   /** Active renderer adapter, present only while the element is connected. */
-  #adapter: ReteLitAdapter | null = null;
+  #adapter: ReteLitAdapter | ReactFlowAdapter | null = null;
 
   /** Current in-memory workflow graph. */
   #graph: WorkflowGraph | null = null;
@@ -104,13 +107,15 @@ class SwEditorElement extends HTMLElement {
   /**
    * Called by the browser when the element is inserted into the document.
    *
-   * Creates the rete-lit renderer canvas, bootstraps the initial workflow
-   * graph, mounts the renderer, and renders the first set of affordances.
+   * Reads the `?renderer=` URL search parameter to select the active renderer
+   * backend (`"react-flow"` or `"rete-lit"`, defaulting to `"rete-lit"`),
+   * creates the renderer canvas, bootstraps the initial workflow graph, mounts
+   * the renderer, and renders the first set of affordances.
    */
   connectedCallback(): void {
-    // Create an inner div for the rete canvas so rete's overflow:hidden does
-    // not clip sibling elements (affordance buttons, task menus) we append to
-    // `this`.
+    // Create an inner div for the renderer canvas so the renderer's
+    // overflow:hidden does not clip sibling elements (affordance buttons, task
+    // menus) we append to `this`.
     const canvas = document.createElement("div");
     canvas.style.width = "100%";
     canvas.style.height = "100%";
@@ -119,7 +124,12 @@ class SwEditorElement extends HTMLElement {
     this.#counter = new RevisionCounter();
     this.#graph = bootstrapWorkflowGraph();
 
-    this.#adapter = new ReteLitAdapter();
+    const renderer = new URLSearchParams(location.search).get("renderer");
+    if (renderer === "react-flow") {
+      this.#adapter = new ReactFlowAdapter();
+    } else {
+      this.#adapter = new ReteLitAdapter();
+    }
     this.#adapter.mount(canvas, this.#graph);
 
     this.#syncAffordances();
