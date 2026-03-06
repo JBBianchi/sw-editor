@@ -2,9 +2,9 @@ import { defineConfig } from "vite";
 import { resolve } from "node:path";
 
 /**
- * Vite configuration for the demo harness app.
+ * Vite configuration for the e2e harness app.
  *
- * Resolves workspace packages from their TypeScript source so the demo
+ * Resolves workspace packages from their TypeScript source so the harness
  * can be run with `pnpm dev` without a separate build step for each package.
  *
  * Sub-path aliases (e.g. `@sw-editor/editor-host-client/rete-lit`) must be
@@ -15,15 +15,15 @@ export default defineConfig({
     alias: [
       {
         find: "@sw-editor/editor-host-client/rete-lit",
-        replacement: resolve(__dirname, "../packages/editor-host-client/src/rete-lit.ts"),
+        replacement: resolve(__dirname, "../../packages/editor-host-client/src/rete-lit.ts"),
       },
       {
         find: "@sw-editor/editor-host-client",
-        replacement: resolve(__dirname, "../packages/editor-host-client/src/index.ts"),
+        replacement: resolve(__dirname, "../../packages/editor-host-client/src/index.ts"),
       },
       {
         find: "@sw-editor/editor-core",
-        replacement: resolve(__dirname, "../packages/editor-core/src/index.ts"),
+        replacement: resolve(__dirname, "../../packages/editor-core/src/index.ts"),
       },
     ],
   },
