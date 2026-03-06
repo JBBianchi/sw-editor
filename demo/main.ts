@@ -10,7 +10,11 @@
  * @module demo/main
  */
 
-import { bootstrapWorkflowGraph } from "@sw-editor/editor-core";
+import {
+  bootstrapWorkflowGraph,
+  parseWorkflowSource,
+  projectWorkflowToGraph,
+} from "@sw-editor/editor-core";
 import { ReteLitAdapter } from "@sw-editor/editor-host-client/rete-lit";
 
 /**
@@ -18,6 +22,9 @@ import { ReteLitAdapter } from "@sw-editor/editor-host-client/rete-lit";
  *
  * Mounts a rete-lit renderer displaying a bootstrapped empty workflow graph
  * on connection and disposes it on disconnection.
+ *
+ * Exposes {@link loadSource} for programmatic YAML/JSON workflow loading,
+ * used by the demo harness load button and e2e tests.
  *
  * **Usage**
  * ```html
@@ -48,6 +55,28 @@ class SwEditorElement extends HTMLElement {
   disconnectedCallback(): void {
     this.#adapter?.dispose();
     this.#adapter = null;
+  }
+
+  /**
+   * Loads a YAML workflow source string into the editor.
+   *
+   * Parses the content, projects the parsed model to a visual graph, and
+   * updates the renderer. Sets `data-node-count` on the element to the total
+   * number of graph nodes (start + tasks + end) so that e2e tests can assert
+   * on the rendered graph state without depending on renderer-internal DOM
+   * structure.
+   *
+   * No-op when the adapter is not mounted or the source fails to parse.
+   *
+   * @param content - A YAML-formatted workflow document string.
+   */
+  loadSource(content: string): void {
+    if (!this.#adapter) return;
+    const result = parseWorkflowSource({ format: "yaml", content });
+    if (!result.ok) return;
+    const graph = projectWorkflowToGraph(result.workflow);
+    this.#adapter.update(graph);
+    this.dataset.nodeCount = String(graph.nodes.length);
   }
 }
 
