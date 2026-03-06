@@ -36,7 +36,7 @@ const DEFAULT_WORKFLOW_SOURCE: WorkflowSource = {
         name: "new-workflow",
         version: "0.0.1",
       },
-      do: [],
+      do: [{ start: { set: { status: "initialized" } } }],
     },
     null,
     2,
