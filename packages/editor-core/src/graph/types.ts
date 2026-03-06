@@ -51,7 +51,14 @@ export interface GraphEdge {
  * - Insert operations must preserve graph connectivity.
  */
 export interface WorkflowGraph {
-  /** Ordered list of graph nodes. */
+  /**
+   * Ordered list of graph nodes.
+   *
+   * **Ordering contract:** For linear flows the array order represents
+   * left-to-right visual layout order. Renderers derive node placement
+   * directly from array position, so insertion commands must splice new
+   * nodes at the correct index to maintain the expected visual sequence.
+   */
   nodes: GraphNode[];
   /** Ordered list of directed edges between nodes. */
   edges: GraphEdge[];
