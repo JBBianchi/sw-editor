@@ -27,6 +27,10 @@ You are updating the project constitution at `.specify/memory/constitution.md`. 
 
 Follow this execution flow:
 
+Script note:
+- This skill does not rely on `.specify/scripts/bash/*.sh` or `.specify/scripts/powershell/*.ps1` entry points directly.
+- If a future revision adds script-driven setup here, document both the Bash and PowerShell command variants with their exact paths and arguments.
+
 1. Load the existing constitution at `.specify/memory/constitution.md`.
    - Identify every placeholder token of the form `[ALL_CAPS_IDENTIFIER]`.
    **IMPORTANT**: The user might require less or more principles than the ones used in the template. If a number is specified, respect that - follow the general template. You will update the doc accordingly.
