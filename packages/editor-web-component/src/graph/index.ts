@@ -17,3 +17,9 @@ export {
   InsertionUI,
   MVP_TASK_TYPES,
 } from "./insertion-ui.js";
+
+export type {
+  FocusTarget,
+  RendererAdapter,
+  RendererEdgeAnchor,
+} from "@sw-editor/editor-renderer-contract";
