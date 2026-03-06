@@ -72,7 +72,7 @@
 - [x] T032 Fix all biome lint and format violations across codebase (`pnpm biome check .` exits clean)
 - [x] T033 Document and triage all gaps from audit tasks #94, #95, #96; file out-of-scope items as child issues
 - [x] T034 [OUT-OF-SCOPE #106] Create demo HTML harness and add `webServer` to `playwright.config.ts` to automate Playwright e2e (GAP-001 / F001 — SC-001, SC-007) — completed in tasks #141 + #126
-- [ ] T035 [OUT-OF-SCOPE #107] Add `tests/e2e/quickstart-scenarios.spec.ts` Playwright counterpart for quickstart scenarios (Finding F002)
+- [x] T035 [OUT-OF-SCOPE #107] Add `tests/e2e/quickstart-scenarios.spec.ts` Playwright counterpart for quickstart scenarios (Finding F002) — Scenario 3 implemented with load affordance in demo harness and passing e2e assertions
 - [x] T036 [OUT-OF-SCOPE #108] Add package-level unit tests for `packages/editor-host-client/` (Finding F003) — 59 tests passing across capabilities.spec.ts, methods.spec.ts, export.spec.ts (#133, #134, #135)
 
 ## Phase 8: Example Applications (Phase C)
