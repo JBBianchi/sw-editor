@@ -37,15 +37,15 @@ const FORBIDDEN_WARNING_PATTERNS: Array<{ label: string; substring: string }> = 
   },
   {
     label: "React Flow 'Node type not found' warning for start",
-    substring: "Node type \"start\" not found",
+    substring: 'Node type "start" not found',
   },
   {
     label: "React Flow 'Node type not found' warning for end",
-    substring: "Node type \"end\" not found",
+    substring: 'Node type "end" not found',
   },
   {
     label: "React Flow 'Node type not found' warning for task",
-    substring: "Node type \"task\" not found",
+    substring: 'Node type "task" not found',
   },
 ];
 
@@ -130,10 +130,7 @@ test.describe("React Flow renderer smoke test", () => {
   test("loads without uncaught JavaScript errors", async ({ page }) => {
     const { errors, warnings } = await openEditorWithReactFlow(page);
 
-    expect(
-      errors,
-      `Unexpected uncaught JS errors on load: ${errors.join("; ")}`,
-    ).toHaveLength(0);
+    expect(errors, `Unexpected uncaught JS errors on load: ${errors.join("; ")}`).toHaveLength(0);
 
     assertNoForbiddenWarnings(warnings);
 

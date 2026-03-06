@@ -71,24 +71,14 @@ vi.mock("rete-area-plugin", () => {
   }
   class AreaPlugin {
     use(_plugin: unknown): void {}
-    async translate(
-      _id: string,
-      _position: { x: number; y: number },
-    ): Promise<void> {}
+    async translate(_id: string, _position: { x: number; y: number }): Promise<void> {}
     destroy(): void {}
   }
   const AreaExtensions = {
-    selectableNodes: (
-      _area: unknown,
-      _selector: unknown,
-      _opts: unknown,
-    ): void => {},
+    selectableNodes: (_area: unknown, _selector: unknown, _opts: unknown): void => {},
     accumulateOnCtrl: () => ({}),
     simpleNodesOrder: (_area: unknown): void => {},
-    zoomAt: (
-      _area: unknown,
-      _nodes: unknown[],
-    ): Promise<void> => Promise.resolve(),
+    zoomAt: (_area: unknown, _nodes: unknown[]): Promise<void> => Promise.resolve(),
     Selector,
   };
   return { AreaPlugin, AreaExtensions };
@@ -310,11 +300,9 @@ describe("Insertion renderer matrix", () => {
         // Bootstrap an empty graph (start → end) and insert a task.
         const baseGraph = bootstrapWorkflowGraph();
         const counter = new RevisionCounter();
-        const { graph: updatedGraph, nodeId: newNodeId } = insertTask(
-          baseGraph,
-          counter,
-          { edgeId: INITIAL_EDGE_ID },
-        );
+        const { graph: updatedGraph, nodeId: newNodeId } = insertTask(baseGraph, counter, {
+          edgeId: INITIAL_EDGE_ID,
+        });
 
         // After insertion the graph has:
         //   __start__ (index 0) → newNode (index 1) → __end__ (index 2)
@@ -334,7 +322,7 @@ describe("Insertion renderer matrix", () => {
         // Compute the expected midpoint from the linear layout.
         const startIndex = updatedGraph.nodes.findIndex((n) => n.id === START_NODE_ID);
         const newNodeIndex = updatedGraph.nodes.findIndex((n) => n.id === newNodeId);
-        const expectedMidX = ((startIndex * NODE_H_GAP) + (newNodeIndex * NODE_H_GAP)) / 2;
+        const expectedMidX = (startIndex * NODE_H_GAP + newNodeIndex * NODE_H_GAP) / 2;
         const expectedMidY = 0;
 
         const dist = distance(anchor!.x, anchor!.y, expectedMidX, expectedMidY);
@@ -355,11 +343,9 @@ describe("Insertion renderer matrix", () => {
 
         const baseGraph = bootstrapWorkflowGraph();
         const counter = new RevisionCounter();
-        const { graph: updatedGraph, nodeId: newNodeId } = insertTask(
-          baseGraph,
-          counter,
-          { edgeId: INITIAL_EDGE_ID },
-        );
+        const { graph: updatedGraph, nodeId: newNodeId } = insertTask(baseGraph, counter, {
+          edgeId: INITIAL_EDGE_ID,
+        });
 
         // Query the edge anchor for the second edge (newNode → end).
         const secondEdge = updatedGraph.edges.find((e) => e.target === END_NODE_ID);
@@ -370,7 +356,7 @@ describe("Insertion renderer matrix", () => {
 
         const newNodeIndex = updatedGraph.nodes.findIndex((n) => n.id === newNodeId);
         const endIndex = updatedGraph.nodes.findIndex((n) => n.id === END_NODE_ID);
-        const expectedMidX = ((newNodeIndex * NODE_H_GAP) + (endIndex * NODE_H_GAP)) / 2;
+        const expectedMidX = (newNodeIndex * NODE_H_GAP + endIndex * NODE_H_GAP) / 2;
         const expectedMidY = 0;
 
         const dist = distance(anchor!.x, anchor!.y, expectedMidX, expectedMidY);
@@ -389,19 +375,15 @@ describe("Insertion renderer matrix", () => {
 
         const baseGraph = bootstrapWorkflowGraph();
         const counter = new RevisionCounter();
-        const { nodeId: newNodeId } = insertTask(
-          baseGraph,
-          counter,
-          { edgeId: INITIAL_EDGE_ID, taskReference: "focusTestTask" },
-        );
+        const { nodeId: newNodeId } = insertTask(baseGraph, counter, {
+          edgeId: INITIAL_EDGE_ID,
+          taskReference: "focusTestTask",
+        });
 
         // Simulate the post-insertion focus call that editor-core would make.
         stub.focusNode({ nodeId: newNodeId, behavior: "center" });
 
-        expect(
-          stub.lastFocusTarget,
-          "focusNode must have been called",
-        ).not.toBeNull();
+        expect(stub.lastFocusTarget, "focusNode must have been called").not.toBeNull();
         expect(stub.lastFocusTarget!.nodeId).toBe(newNodeId);
         expect(stub.lastFocusTarget!.behavior).toBe("center");
       });
@@ -412,11 +394,7 @@ describe("Insertion renderer matrix", () => {
 
         const baseGraph = bootstrapWorkflowGraph();
         const counter = new RevisionCounter();
-        const { nodeId: newNodeId } = insertTask(
-          baseGraph,
-          counter,
-          { edgeId: INITIAL_EDGE_ID },
-        );
+        const { nodeId: newNodeId } = insertTask(baseGraph, counter, { edgeId: INITIAL_EDGE_ID });
 
         stub.focusNode({ nodeId: newNodeId, behavior: "ensure-visible" });
 
@@ -467,14 +445,13 @@ describe("Insertion renderer matrix", () => {
 
           const srcIdx = second.graph.nodes.findIndex((n) => n.id === edge.source);
           const tgtIdx = second.graph.nodes.findIndex((n) => n.id === edge.target);
-          const expectedX = ((srcIdx * NODE_H_GAP) + (tgtIdx * NODE_H_GAP)) / 2;
+          const expectedX = (srcIdx * NODE_H_GAP + tgtIdx * NODE_H_GAP) / 2;
           const expectedY = 0;
 
           const dist = distance(anchor!.x, anchor!.y, expectedX, expectedY);
-          expect(
-            dist,
-            `Edge ${edge.id} anchor midpoint exceeds tolerance`,
-          ).toBeLessThanOrEqual(MIDPOINT_TOLERANCE_PX);
+          expect(dist, `Edge ${edge.id} anchor midpoint exceeds tolerance`).toBeLessThanOrEqual(
+            MIDPOINT_TOLERANCE_PX,
+          );
         }
 
         // Focus should target the second inserted node.
