@@ -11,8 +11,8 @@
 
 **Purpose**: Add reusable fixtures and test helpers for insertion-layout regressions.
 
-- [ ] T001 Add blank and linear insertion fixtures in `tests/fixtures/valid/insert-layout-start-end.json` and `tests/fixtures/valid/insert-layout-linear.json`
-- [ ] T002 [P] Add shared insertion interaction helpers in `tests/integration/insertion-layout.helpers.ts`
+- [x] T001 Add blank and linear insertion fixtures in `tests/fixtures/valid/insert-layout-start-end.json` and `tests/fixtures/valid/insert-layout-linear.json`
+- [x] T002 [P] Add shared insertion interaction helpers in `tests/integration/insertion-layout.helpers.ts`
 
 ---
 
@@ -22,8 +22,8 @@
 
 **CRITICAL**: No user story work should start before this phase is complete.
 
-- [ ] T003 Add insertion-anchor and post-insert focus hook types to `packages/editor-renderer-contract/src/renderer-adapter.ts`
-- [ ] T004 Export the renderer insertion hook surface from `packages/editor-renderer-contract/src/index.ts`
+- [x] T003 Add insertion-anchor and post-insert focus hook types to `packages/editor-renderer-contract/src/renderer-adapter.ts`
+- [x] T004 Export the renderer insertion hook surface from `packages/editor-renderer-contract/src/index.ts`
 
 **Checkpoint**: Shared renderer contract is ready for story implementation.
 
@@ -37,14 +37,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T005 [P] [US1] Add insertion slot ordering and preserved predecessor -> inserted -> successor edge-semantics regressions in `packages/editor-core/tests/commands/insert-task.test.ts`
-- [ ] T006 [P] [US1] Add blank and linear insertion order coverage in `tests/integration/insertion-layout-order.spec.ts`
+- [x] T005 [P] [US1] Add insertion slot ordering and preserved predecessor -> inserted -> successor edge-semantics regressions in `packages/editor-core/tests/commands/insert-task.test.ts`
+- [x] T006 [P] [US1] Add blank and linear insertion order coverage in `tests/integration/insertion-layout-order.spec.ts`
 - [ ] T021 [P] [US1] Add end-to-end blank and linear insertion ordering coverage in `tests/e2e/insert-layout-order.spec.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Insert new task nodes at the split-edge sequence slot in `packages/editor-core/src/commands/insert-task.ts`
-- [ ] T008 [US1] Record ordered linear-flow semantics in `packages/editor-core/src/graph/types.ts`
+- [x] T007 [US1] Insert new task nodes at the split-edge sequence slot in `packages/editor-core/src/commands/insert-task.ts`
+- [x] T008 [US1] Record ordered linear-flow semantics in `packages/editor-core/src/graph/types.ts`
 
 **Checkpoint**: User Story 1 is complete when blank and linear insertion order is correct and independently testable.
 
@@ -58,17 +58,17 @@
 
 ### Tests for User Story 2
 
-- [ ] T009 [P] [US2] Add renderer-anchor attachment coverage in `packages/editor-web-component/tests/graph/insertion-ui.test.ts`
-- [ ] T010 [P] [US2] Add cross-renderer affordance alignment, insertion-order parity, and midpoint-tolerance (<= 12 px from edge midpoint) coverage in `tests/integration/insertion-renderer-matrix.spec.ts`
+- [x] T009 [P] [US2] Add renderer-anchor attachment coverage in `packages/editor-web-component/tests/graph/insertion-ui.test.ts`
+- [x] T010 [P] [US2] Add cross-renderer affordance alignment, insertion-order parity, and midpoint-tolerance (<= 12 px from edge midpoint) coverage in `tests/integration/insertion-renderer-matrix.spec.ts`
 - [ ] T022 [P] [US2] Add end-to-end edge-anchor alignment coverage with midpoint-tolerance assertions (<= 12 px) in `tests/e2e/insert-layout-affordance.spec.ts`
-- [ ] T023 [P] [US2] Add keyboard, accessible-name, and post-insert focus-landing regression coverage for edge-anchored insertion controls in `tests/e2e/accessibility-insert-layout.spec.ts`
+- [x] T023 [P] [US2] Add keyboard, accessible-name, and post-insert focus-landing regression coverage for edge-anchored insertion controls in `tests/e2e/accessibility-insert-layout.spec.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Consume renderer-provided edge anchors and focus callbacks in `packages/editor-web-component/src/graph/insertion-ui.ts`
-- [ ] T012 [US2] Export the renderer-backed insertion surface from `packages/editor-web-component/src/graph/index.ts`
-- [ ] T013 [P] [US2] Implement midpoint edge anchors and post-insert focus in `packages/editor-renderer-react-flow/src/react-flow-adapter.ts`
-- [ ] T014 [P] [US2] Implement midpoint edge anchors and post-insert focus in `packages/editor-renderer-rete-lit/src/rete-lit-adapter.ts`
+- [x] T011 [US2] Consume renderer-provided edge anchors and focus callbacks in `packages/editor-web-component/src/graph/insertion-ui.ts`
+- [x] T012 [US2] Export the renderer-backed insertion surface from `packages/editor-web-component/src/graph/index.ts`
+- [x] T013 [P] [US2] Implement midpoint edge anchors and post-insert focus in `packages/editor-renderer-react-flow/src/react-flow-adapter.ts`
+- [x] T014 [P] [US2] Implement midpoint edge anchors and post-insert focus in `packages/editor-renderer-rete-lit/src/rete-lit-adapter.ts`
 
 **Checkpoint**: User Story 2 is complete when the insertion control is edge-anchored and aligned in both supported renderer views.
 
@@ -82,13 +82,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T015 [P] [US3] Add repeated-insertion layout regressions in `tests/integration/repeated-insert-layout.spec.ts`
-- [ ] T016 [P] [US3] Add sequential insertion update coverage in `packages/editor-web-component/tests/graph/insertion-ui.test.ts`
+- [x] T015 [P] [US3] Add repeated-insertion layout regressions in `tests/integration/repeated-insert-layout.spec.ts`
+- [x] T016 [P] [US3] Add sequential insertion update coverage in `packages/editor-web-component/tests/graph/insertion-ui.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Preserve readable downstream spacing for repeated insertions in `packages/editor-renderer-react-flow/src/react-flow-adapter.ts`
-- [ ] T018 [US3] Preserve readable downstream spacing for repeated insertions in `packages/editor-renderer-rete-lit/src/rete-lit-adapter.ts`
+- [x] T017 [US3] Preserve readable downstream spacing for repeated insertions in `packages/editor-renderer-react-flow/src/react-flow-adapter.ts`
+- [x] T018 [US3] Preserve readable downstream spacing for repeated insertions in `packages/editor-renderer-rete-lit/src/rete-lit-adapter.ts`
 
 **Checkpoint**: User Story 3 is complete when repeated insertions stay readable in both renderer bundles.
 
@@ -101,7 +101,7 @@
 - [ ] T019 [P] Add insertion-layout quickstart regression coverage in `tests/integration/quickstart-scenarios.spec.ts`
 - [ ] T024 [P] Add timed start-to-end insertion validation for SC-004 (< 5s confirmation) in `tests/e2e/insert-layout-order.spec.ts`
 - [ ] T025 [P] Add performance-threshold validation for insertion settle (95p <= 250 ms) and anchor realignment after pan/zoom (<= 100 ms) in `tests/integration/insertion-performance.spec.ts`
-- [ ] T020 Run quickstart scenarios from `specs/006-fix-insert-layout/quickstart.md`
+- [x] T020 Run quickstart scenarios from `specs/006-fix-insert-layout/quickstart.md`
 
 ---
 
