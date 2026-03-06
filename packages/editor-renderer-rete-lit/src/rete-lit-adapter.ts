@@ -291,6 +291,18 @@ export class ReteLitAdapter implements RendererAdapter {
   private mounted: MountedState | null = null;
 
   /**
+   * The most recently applied workflow graph, used for synchronous position
+   * lookups in {@link getEdgeAnchor} when node views are not yet available.
+   */
+  private lastGraph: WorkflowGraph | null = null;
+
+  /**
+   * Monotonically increasing generation counter used to cancel stale
+   * {@link applyGraph} operations when rapid repeated insertions occur.
+   */
+  private applyGeneration = 0;
+
+  /**
    * Maps a Rete node id to the corresponding workflow graph node id.
    *
    * Rebuilt on every {@link applyGraph} call so that it always reflects the
@@ -368,6 +380,7 @@ export class ReteLitAdapter implements RendererAdapter {
     AreaExtensions.simpleNodesOrder(area);
 
     this.mounted = { editor, area };
+    this.lastGraph = graph;
 
     void this.applyGraph(graph);
   }
@@ -387,6 +400,7 @@ export class ReteLitAdapter implements RendererAdapter {
     if (this.mounted === null) {
       throw new Error("ReteLitAdapter: update() called before mount().");
     }
+    this.lastGraph = graph;
     void this.applyGraph(graph);
   }
 
@@ -403,27 +417,67 @@ export class ReteLitAdapter implements RendererAdapter {
   getEdgeAnchor(edgeId: string): RendererEdgeAnchor | null {
     if (this.mounted === null) return null;
 
-    const reteConnId = this.graphIdToReteConn.get(edgeId);
-    if (reteConnId === undefined) return null;
-
     const { editor, area } = this.mounted;
-    const conn = editor.getConnection(reteConnId);
-    if (conn === undefined) return null;
 
-    const sourceView = area.nodeViews.get(conn.source);
-    const targetView = area.nodeViews.get(conn.target);
-    if (sourceView === undefined || targetView === undefined) return null;
+    // Try Rete-internal views first (most accurate after layout settles).
+    const reteConnId = this.graphIdToReteConn.get(edgeId);
+    if (reteConnId !== undefined) {
+      const conn = editor.getConnection(reteConnId);
+      if (conn !== undefined) {
+        const sourceView = area.nodeViews.get(conn.source);
+        const targetView = area.nodeViews.get(conn.target);
+        if (sourceView !== undefined && targetView !== undefined) {
+          const sourceGraphId = this.reteNodeToGraphId.get(conn.source);
+          const targetGraphId = this.reteNodeToGraphId.get(conn.target);
+          if (sourceGraphId !== undefined && targetGraphId !== undefined) {
+            return {
+              edgeId,
+              sourceNodeId: sourceGraphId,
+              targetNodeId: targetGraphId,
+              x: (sourceView.position.x + targetView.position.x) / 2,
+              y: (sourceView.position.y + targetView.position.y) / 2,
+            };
+          }
+        }
+      }
+    }
 
-    const sourceGraphId = this.reteNodeToGraphId.get(conn.source);
-    const targetGraphId = this.reteNodeToGraphId.get(conn.target);
-    if (sourceGraphId === undefined || targetGraphId === undefined) return null;
+    // Fallback: compute positions synchronously from the cached graph so that
+    // edge anchors are available immediately after update(), even before the
+    // async Rete layout has settled.
+    return this.getEdgeAnchorFromGraph(edgeId);
+  }
+
+  /**
+   * Compute an edge anchor synchronously from the cached {@link lastGraph}.
+   *
+   * Uses the same linear layout formula (`index * NODE_GAP`) to derive node
+   * positions without depending on Rete node views, ensuring anchors are
+   * available immediately after an {@link update} call.
+   *
+   * @param edgeId - The workflow graph edge identity to query.
+   * @returns The edge anchor with midpoint coordinates, or `null` if unavailable.
+   */
+  private getEdgeAnchorFromGraph(edgeId: string): RendererEdgeAnchor | null {
+    if (this.lastGraph === null) return null;
+
+    const edge = this.lastGraph.edges.find((e) => e.id === edgeId);
+    if (edge === undefined) return null;
+
+    const sourceIndex = this.lastGraph.nodes.findIndex((n) => n.id === edge.source);
+    const targetIndex = this.lastGraph.nodes.findIndex((n) => n.id === edge.target);
+    if (sourceIndex < 0 || targetIndex < 0) return null;
+
+    const NODE_GAP = 220;
+    const sourceX = sourceIndex * NODE_GAP;
+    const targetX = targetIndex * NODE_GAP;
 
     return {
       edgeId,
-      sourceNodeId: sourceGraphId,
-      targetNodeId: targetGraphId,
-      x: (sourceView.position.x + targetView.position.x) / 2,
-      y: (sourceView.position.y + targetView.position.y) / 2,
+      sourceNodeId: edge.source,
+      targetNodeId: edge.target,
+      x: (sourceX + targetX) / 2,
+      y: 0,
     };
   }
 
@@ -466,12 +520,14 @@ export class ReteLitAdapter implements RendererAdapter {
     if (this.mounted === null) {
       return;
     }
+    this.applyGeneration += 1;
     this.mounted.area.destroy();
     this.bridge.offSelectionChange();
     this.reteNodeToGraphId.clear();
     this.reteConnToGraphId.clear();
     this.graphIdToReteNode.clear();
     this.graphIdToReteConn.clear();
+    this.lastGraph = null;
     this.mounted = null;
   }
 
@@ -494,9 +550,13 @@ export class ReteLitAdapter implements RendererAdapter {
     const state = this.mounted;
     if (state === null) return;
 
+    const generation = ++this.applyGeneration;
     const { editor, area } = state;
 
     await editor.clear();
+
+    // Bail out if a newer applyGraph call has started (rapid repeated insertions).
+    if (generation !== this.applyGeneration) return;
 
     this.reteNodeToGraphId.clear();
     this.reteConnToGraphId.clear();
@@ -511,6 +571,8 @@ export class ReteLitAdapter implements RendererAdapter {
     let xOffset = 0;
 
     for (const graphNode of graph.nodes) {
+      if (generation !== this.applyGeneration) return;
+
       const node = new ClassicPreset.Node(graphNode.kind);
       node.addOutput("out", new ClassicPreset.Output(socket));
       node.addInput("in", new ClassicPreset.Input(socket));
@@ -526,6 +588,8 @@ export class ReteLitAdapter implements RendererAdapter {
     }
 
     for (const graphEdge of graph.edges) {
+      if (generation !== this.applyGeneration) return;
+
       const sourceNode = reteNodeMap.get(graphEdge.source);
       const targetNode = reteNodeMap.get(graphEdge.target);
 
@@ -537,6 +601,9 @@ export class ReteLitAdapter implements RendererAdapter {
       this.graphIdToReteConn.set(graphEdge.id, conn.id);
     }
 
-    void AreaExtensions.zoomAt(area, editor.getNodes());
+    // Only zoom if this is still the latest generation.
+    if (generation === this.applyGeneration) {
+      void AreaExtensions.zoomAt(area, editor.getNodes());
+    }
   }
 }
