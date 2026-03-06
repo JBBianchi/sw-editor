@@ -47,3 +47,4 @@ export function getCapabilities(): CapabilitySnapshot {
 
 export type { CapabilitySnapshot };
 export type { RendererCapabilitySnapshot } from "./contracts/capabilities.js";
+export { ReactFlowAdapter } from "@sw-editor/editor-renderer-react-flow";
