@@ -150,18 +150,38 @@ function nodePosition(index: number): { x: number; y: number } {
 }
 
 /**
+ * Compute layout positions for all nodes in a graph, keyed by node ID.
+ *
+ * Produces a fresh position map every time it is called so that repeated
+ * insertions always receive recalculated, non-overlapping coordinates.
+ * Each node is assigned a unique horizontal slot based on its array index,
+ * guaranteeing that no two nodes share the same position regardless of
+ * how many insertions have occurred.
+ *
+ * @param graph - The workflow graph whose nodes need layout positions.
+ * @returns A map from node ID to `{x, y}` coordinates.
+ */
+function computeLayoutPositions(graph: WorkflowGraph): Map<string, { x: number; y: number }> {
+  const positions = new Map<string, { x: number; y: number }>();
+  for (let i = 0; i < graph.nodes.length; i++) {
+    const node = graph.nodes[i]!;
+    positions.set(node.id, nodePosition(i));
+  }
+  return positions;
+}
+
+/**
  * Convert a {@link RendererGraphNode} to a React Flow {@link Node}.
  *
  * @param node - The renderer graph node to convert.
- * @param index - The index of the node in the ordered nodes array, used for
- *   default layout positioning.
+ * @param position - The pre-computed layout position for this node.
  * @returns A React Flow node object suitable for passing to `<ReactFlow>`.
  */
-function toRFNode(node: RendererGraphNode, index: number): RFNode {
+function toRFNode(node: RendererGraphNode, position: { x: number; y: number }): RFNode {
   return {
     id: node.id,
     type: node.kind,
-    position: nodePosition(index),
+    position,
     data: {
       ...node.data,
       kind: node.kind,
@@ -188,16 +208,25 @@ function toRFEdge(edge: RendererGraphEdge): RFEdge {
 /**
  * Convert a {@link WorkflowGraph} to separate React Flow nodes and edges arrays.
  *
+ * Recalculates layout positions for every node on each call so that repeated
+ * insertions always produce non-overlapping coordinates. The position map is
+ * returned alongside the converted arrays so the caller can cache it for
+ * subsequent edge-anchor queries.
+ *
  * @param graph - The workflow graph to convert.
- * @returns An object containing the converted `nodes` and `edges` arrays.
+ * @returns An object containing the converted `nodes`, `edges`, and a
+ *   `positions` map keyed by node ID.
  */
 function toRFGraph(graph: WorkflowGraph): {
   nodes: RFNode[];
   edges: RFEdge[];
+  positions: Map<string, { x: number; y: number }>;
 } {
+  const positions = computeLayoutPositions(graph);
   return {
-    nodes: graph.nodes.map((n, i) => toRFNode(n, i)),
+    nodes: graph.nodes.map((n) => toRFNode(n, positions.get(n.id)!)),
     edges: graph.edges.map((e) => toRFEdge(e)),
+    positions,
   };
 }
 
@@ -399,6 +428,14 @@ export class ReactFlowAdapter implements RendererAdapter {
   private lastGraph: WorkflowGraph | null = null;
 
   /**
+   * Cached layout positions keyed by node ID, computed during {@link mount} and
+   * {@link update}. Kept in sync with {@link lastGraph} so that
+   * {@link getEdgeAnchor} returns correct midpoints immediately after an
+   * insertion without needing to wait for a React render cycle.
+   */
+  private layoutPositions: Map<string, { x: number; y: number }> = new Map();
+
+  /**
    * Attach the React Flow renderer to `container` and render the initial graph.
    *
    * Creates a React DOM root and mounts the internal {@link WorkflowFlowApp}
@@ -418,7 +455,8 @@ export class ReactFlowAdapter implements RendererAdapter {
     }
 
     this.lastGraph = graph;
-    const { nodes, edges } = toRFGraph(graph);
+    const { nodes, edges, positions } = toRFGraph(graph);
+    this.layoutPositions = positions;
     this.root = createRoot(container);
 
     const bridge = this.events;
@@ -458,7 +496,8 @@ export class ReactFlowAdapter implements RendererAdapter {
     }
 
     this.lastGraph = graph;
-    const { nodes, edges } = toRFGraph(graph);
+    const { nodes, edges, positions } = toRFGraph(graph);
+    this.layoutPositions = positions;
     this.controller.updateGraph(nodes, edges);
   }
 
@@ -466,8 +505,14 @@ export class ReactFlowAdapter implements RendererAdapter {
    * Retrieve the visual anchor point for the given edge.
    *
    * Computes the geometric midpoint between the source and target node
-   * positions in the rendered layout. Returns `null` if the edge is not
-   * found in the current graph or the adapter is not mounted.
+   * positions using the cached layout computed during the most recent
+   * {@link mount} or {@link update} call. Because the layout cache is
+   * updated synchronously before React re-renders, anchors for newly
+   * created edges are available immediately after insertion — no render
+   * cycle delay.
+   *
+   * Returns `null` if the edge is not found in the current graph or the
+   * adapter is not mounted.
    *
    * @param edgeId - The identity of the edge to query.
    * @returns The edge anchor with midpoint coordinates, or `null` if unavailable.
@@ -482,14 +527,11 @@ export class ReactFlowAdapter implements RendererAdapter {
       return null;
     }
 
-    const sourceIndex = this.lastGraph.nodes.findIndex((n) => n.id === edge.source);
-    const targetIndex = this.lastGraph.nodes.findIndex((n) => n.id === edge.target);
-    if (sourceIndex < 0 || targetIndex < 0) {
+    const sourcePos = this.layoutPositions.get(edge.source);
+    const targetPos = this.layoutPositions.get(edge.target);
+    if (sourcePos === undefined || targetPos === undefined) {
       return null;
     }
-
-    const sourcePos = nodePosition(sourceIndex);
-    const targetPos = nodePosition(targetIndex);
 
     return {
       edgeId,
@@ -509,16 +551,15 @@ export class ReactFlowAdapter implements RendererAdapter {
    * @param target - Describes which node to focus and the desired behavior.
    */
   focusNode(target: FocusTarget): void {
-    if (this.disposed || this.controller === null || this.lastGraph === null) {
+    if (this.disposed || this.controller === null) {
       return;
     }
 
-    const nodeIndex = this.lastGraph.nodes.findIndex((n) => n.id === target.nodeId);
-    if (nodeIndex < 0) {
+    const pos = this.layoutPositions.get(target.nodeId);
+    if (pos === undefined) {
       return;
     }
 
-    const pos = nodePosition(nodeIndex);
     this.controller.setCenter(pos.x, pos.y, { duration: 200 });
   }
 
@@ -537,6 +578,7 @@ export class ReactFlowAdapter implements RendererAdapter {
     this.events.offSelectionChange();
     this.controller = null;
     this.lastGraph = null;
+    this.layoutPositions.clear();
     if (this.root !== null) {
       this.root.unmount();
       this.root = null;
