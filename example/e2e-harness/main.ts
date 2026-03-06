@@ -26,7 +26,7 @@ import {
   validateWorkflow,
 } from "@sw-editor/editor-core";
 import { ReactFlowAdapter } from "@sw-editor/editor-host-client/react-flow";
-import { ReteLitAdapter } from "@sw-editor/editor-host-client/rete-lit";
+import type { ReteLitAdapter } from "@sw-editor/editor-host-client/rete-lit";
 
 // ---------------------------------------------------------------------------
 // Task type catalogue (mirrors InsertionUI.MVP_TASK_TYPES)
@@ -112,7 +112,7 @@ class SwEditorElement extends HTMLElement {
    * creates the renderer canvas, bootstraps the initial workflow graph, mounts
    * the renderer, and renders the first set of affordances.
    */
-  connectedCallback(): void {
+  async connectedCallback(): Promise<void> {
     // Create an inner div for the renderer canvas so the renderer's
     // overflow:hidden does not clip sibling elements (affordance buttons, task
     // menus) we append to `this`.
@@ -128,6 +128,7 @@ class SwEditorElement extends HTMLElement {
     if (renderer === "react-flow") {
       this.#adapter = new ReactFlowAdapter();
     } else {
+      const { ReteLitAdapter } = await import("@sw-editor/editor-host-client/rete-lit");
       this.#adapter = new ReteLitAdapter();
     }
     this.#adapter.mount(canvas, this.#graph);
