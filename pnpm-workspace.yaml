@@ -5,3 +5,5 @@ packages:
   - "packages/editor-renderer-contract"
   - "packages/editor-renderer-rete-lit"
   - "packages/editor-renderer-react-flow"
+  - "example/vanilla-js"
+  - "example/host-events"

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>sw-editor — Vanilla JS Example</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        background: #f8f9fa;
+        color: #212529;
+      }
+      h1 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+      p { color: #555; margin-top: 0; }
+      .card {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1rem;
+      }
+      .card h2 { font-size: 1rem; margin: 0 0 0.5rem; }
+      pre {
+        background: #212529;
+        color: #f8f9fa;
+        padding: 0.75rem;
+        border-radius: 4px;
+        overflow-x: auto;
+        font-size: 0.85rem;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      button {
+        background: #0d6efd;
+        color: #fff;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9rem;
+      }
+      button:hover { background: #0b5ed7; }
+      button:disabled { background: #6c757d; cursor: not-allowed; }
+      .status { font-size: 0.85rem; color: #555; margin-top: 0.5rem; }
+      .status.ok { color: #198754; }
+      .status.error { color: #dc3545; }
+    </style>
+  </head>
+  <body>
+    <h1>sw-editor — Vanilla JS Integration</h1>
+    <p>
+      Demonstrates loading a Serverless Workflow fixture and exporting the
+      result using the host-client API.
+    </p>
+
+    <div class="card">
+      <h2>1. Load workflow from fixture</h2>
+      <button id="btn-load">Load simple.json fixture</button>
+      <p class="status" id="load-status">Not loaded yet.</p>
+    </div>
+
+    <div class="card">
+      <h2>2. Export workflow</h2>
+      <button id="btn-export" disabled>Export as JSON</button>
+      <button id="btn-export-yaml" disabled style="margin-left:0.5rem">Export as YAML</button>
+      <p class="status" id="export-status">Load a workflow first.</p>
+    </div>
+
+    <div class="card">
+      <h2>Exported output</h2>
+      <pre id="output">— no output yet —</pre>
+    </div>
+
+    <!--
+      In a full integration with a built editor bundle, add the component here:
+
+        <script type="module" src="/path/to/sw-editor.esm.js"></script>
+
+      Then embed the editor element:
+
+        <sw-editor id="editor" style="width:100%;height:400px;"></sw-editor>
+
+      And call the host contract methods on it:
+
+        const editor = document.getElementById('editor');
+        await editor.loadWorkflowSource({ source });
+        const result = await editor.exportWorkflowSource();
+    -->
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
