@@ -271,111 +271,238 @@ test.describe("Quickstart Scenario 3: Load Existing YAML", () => {
   });
 });
 
-
 // ---------------------------------------------------------------------------
 // Scenario 4: Diagnostics Flow
 // ---------------------------------------------------------------------------
 
-test.describe
-  .fixme("Quickstart Scenario 4: Diagnostics Flow", () => {
-    test.beforeEach(async ({ page }) => {
+/** Selector for the source textarea added in the demo harness. */
+const SOURCE_INPUT_SELECTOR = 'textarea[aria-label="Workflow source"]';
+
+/**
+ * Selectors for the diagnostics output region added in the demo harness.
+ * Matches by aria-label (case-insensitive partial) or data-testid.
+ */
+const DIAGNOSTICS_REGION_SELECTOR =
+  '[aria-label*="diagnostics" i], [aria-label*="validation" i], [data-testid="diagnostics-live-region"]';
+
+/** Debounce delay used by the demo harness validation wiring (ms). */
+const SOURCE_DEBOUNCE_MS = 500;
+
+test.describe("Quickstart Scenario 4: Diagnostics Flow", () => {
+  /**
+   * Verifies that the diagnostics region is present in the DOM when the
+   * editor host page is loaded.  The region is rendered by the demo harness
+   * independently of any user interaction.
+   *
+   * Quickstart step: "Verify diagnostics event and local/global UI cues."
+   */
+  test("diagnostics region is attached on page load", async ({ page }) => {
+    await openEditor(page);
+
+    const diagnosticsRegion = page.locator(DIAGNOSTICS_REGION_SELECTOR).first();
+    await expect(diagnosticsRegion).toBeAttached();
+  });
+
+  /**
+   * Verifies that pasting invalid JSON into the source textarea causes the
+   * diagnostics region to become non-empty after the debounce window elapses.
+   *
+   * Quickstart steps:
+   *   1. "Enter an invalid transition target." (here: paste invalid JSON)
+   *   2. "Wait for debounce window."
+   *   3. "Verify diagnostics event and local/global UI cues."
+   *
+   * Expected outcome: "diagnostics update consistently for live and full
+   * validation."
+   */
+  test("pasting invalid JSON into the source input shows diagnostics", async ({ page }) => {
+    await openEditor(page);
+
+    const sourceInput = page.locator(SOURCE_INPUT_SELECTOR);
+    await sourceInput.fill('{ "notAWorkflow": true }');
+
+    // Allow the debounce window to elapse before asserting.
+    await page.waitForTimeout(SOURCE_DEBOUNCE_MS + 100);
+
+    const diagnosticsRegion = page.locator(DIAGNOSTICS_REGION_SELECTOR).first();
+    await expect(diagnosticsRegion).toBeAttached();
+    await expect(diagnosticsRegion).not.toBeEmpty();
+  });
+
+  /**
+   * Verifies that clearing the source input after entering invalid content
+   * resets the diagnostics region to empty.
+   *
+   * Quickstart step: continuity of "diagnostics update consistently."
+   */
+  test("clearing the source input resets the diagnostics region", async ({ page }) => {
+    await openEditor(page);
+
+    const sourceInput = page.locator(SOURCE_INPUT_SELECTOR);
+    // First introduce an error.
+    await sourceInput.fill('{ "notAWorkflow": true }');
+    await page.waitForTimeout(SOURCE_DEBOUNCE_MS + 100);
+
+    // Then clear — diagnostics should disappear.
+    await sourceInput.fill("");
+    await page.waitForTimeout(SOURCE_DEBOUNCE_MS + 100);
+
+    const diagnosticsRegion = page.locator(DIAGNOSTICS_REGION_SELECTOR).first();
+    await expect(diagnosticsRegion).toBeEmpty();
+  });
+
+  /**
+   * Verifies that entering an invalid transition target via the properties
+   * panel triggers the diagnostics region.
+   *
+   * Marked fixme: the properties panel transition input is not yet rendered by
+   * the demo harness.  Remove fixme once the panel and transition field land.
+   *
+   * Quickstart step: "Enter an invalid transition target."
+   */
+  test.fixme(
+    "entering an invalid transition target triggers a diagnostics event",
+    async ({ page }) => {
       await openEditor(page);
       const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
       await newWorkflowBtn.press("Enter");
-    });
 
-    test("entering an invalid transition target triggers a diagnostics event", async ({ page }) => {
       const panel = page.locator(PROPERTY_PANEL_SELECTOR);
       const transitionInput = panel
         .locator('[aria-label*="transition" i], [data-field="transition"]')
         .first();
       await transitionInput.fill("__invalid_target__");
 
-      // Wait for the debounce window and diagnostic update.
-      const diagnosticsRegion = page
-        .locator(
-          '[aria-label*="diagnostics" i], [aria-label*="validation" i], [data-testid="diagnostics-live-region"]',
-        )
-        .first();
+      const diagnosticsRegion = page.locator(DIAGNOSTICS_REGION_SELECTOR).first();
       await expect(diagnosticsRegion).toBeAttached();
-    });
+    },
+  );
 
-    test("diagnostic error is reflected in local UI cues on the node", async ({ page }) => {
+  /**
+   * Verifies that a node-level error indicator appears when an invalid
+   * transition target is entered.
+   *
+   * Marked fixme: node error indicators are not yet rendered by the demo
+   * harness.  Remove fixme once the graph node error UI lands.
+   */
+  test.fixme(
+    "diagnostic error is reflected in local UI cues on the node",
+    async ({ page }) => {
+      await openEditor(page);
+      const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
+      await newWorkflowBtn.press("Enter");
+
       const panel = page.locator(PROPERTY_PANEL_SELECTOR);
       const transitionInput = panel
         .locator('[aria-label*="transition" i], [data-field="transition"]')
         .first();
       await transitionInput.fill("__invalid_target__");
 
-      // A node-level error indicator should appear on the graph.
       const errorIndicator = page
         .locator('[data-testid="node-error"], [aria-label*="error" i]')
         .first();
       await expect(errorIndicator).toBeVisible();
-    });
+    },
+  );
 
-    test("explicit validation surfaces global error summary", async ({ page }) => {
-      const validateBtn = page.locator('button[aria-label="Validate workflow"]');
-      await validateBtn.press("Enter");
+  /**
+   * Verifies that explicit validation surfaces a global error summary.
+   *
+   * Marked fixme: the "Validate workflow" button and error summary panel are
+   * not yet rendered by the demo harness.  Remove fixme once they land.
+   */
+  test.fixme("explicit validation surfaces global error summary", async ({ page }) => {
+    await openEditor(page);
+    const validateBtn = page.locator('button[aria-label="Validate workflow"]');
+    await validateBtn.press("Enter");
 
-      const errorSummary = page.locator(
-        '[aria-label="Editor errors"], [data-testid="validation-summary"]',
-      );
-      await expect(errorSummary).toBeVisible();
-    });
+    const errorSummary = page.locator(
+      '[aria-label="Editor errors"], [data-testid="validation-summary"]',
+    );
+    await expect(errorSummary).toBeVisible();
   });
+});
 
 // ---------------------------------------------------------------------------
 // Scenario 5: Privacy Guardrail
 // ---------------------------------------------------------------------------
 
-test.describe
-  .fixme("Quickstart Scenario 5: Privacy Guardrail", () => {
-    test("create/load/edit/export flow completes without outbound network requests", async ({
-      page,
-    }) => {
-      // Intercept and record any outbound requests that are not local.
-      const externalRequests: string[] = [];
-      page.on("request", (req) => {
-        const url = req.url();
-        if (!url.startsWith("http://localhost") && !url.startsWith("http://127.0.0.1")) {
-          externalRequests.push(url);
-        }
-      });
-
-      await openEditor(page);
-
-      const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
-      await newWorkflowBtn.press("Enter");
-
-      // Insert a task.
-      const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
-      await affordance.press("Enter");
-      const firstItem = page.locator(TASK_MENU_ITEM_SELECTOR).first();
-      await firstItem.press("Enter");
-
-      // Export the workflow.
-      const exportBtn = page.locator(EXPORT_BUTTON_SELECTOR);
-      await exportBtn.press("Enter");
-
-      expect(
-        externalRequests,
-        `Editor must not initiate external network requests; observed: ${externalRequests.join(", ")}`,
-      ).toHaveLength(0);
+test.describe("Quickstart Scenario 5: Privacy Guardrail", () => {
+  /**
+   * Verifies that loading a YAML workflow via the demo harness (textarea +
+   * load button) produces no requests to external URLs.  Uses `page.route` to
+   * intercept every network request and record its URL so that external
+   * destinations can be detected and failed.
+   *
+   * Only origins matching `localhost` or `127.0.0.1` are permitted, matching
+   * the Vite preview server (`localhost:4173`).
+   *
+   * Quickstart steps: "Run editor in offline environment." /
+   * "Repeat create/load/edit/export flow."
+   */
+  test("load YAML flow produces no requests to external URLs", async ({ page }) => {
+    // Intercept and record every network request.
+    const networkRequests: string[] = [];
+    await page.route("**", (route) => {
+      networkRequests.push(route.request().url());
+      route.continue();
     });
 
-    test("editor loads and renders without any remote resource dependencies", async ({ page }) => {
-      const failedRequests: string[] = [];
-      page.on("requestfailed", (req) => {
-        failedRequests.push(req.url());
-      });
+    await openEditor(page);
 
-      await openEditor(page);
+    // Load a YAML workflow via the demo harness (implemented in Scenario 3).
+    await loadYaml(page, SIMPLE_YAML_FIXTURE, SIMPLE_YAML_NODE_COUNT);
 
-      // No failed requests (including remote ones) should occur during boot.
-      expect(
-        failedRequests,
-        `Unexpected failed requests during editor load: ${failedRequests.join(", ")}`,
-      ).toHaveLength(0);
-    });
+    // Only localhost / 127.0.0.1 requests are permitted.
+    const externalRequests = networkRequests.filter(
+      (url) => !url.startsWith("http://localhost") && !url.startsWith("http://127.0.0.1"),
+    );
+
+    expect(
+      externalRequests,
+      `Editor must not initiate external network requests; observed: ${externalRequests.join(", ")}`,
+    ).toHaveLength(0);
   });
+
+  /**
+   * Verifies that the full create/insert/export flow (once those affordances
+   * are implemented) produces no requests to external URLs.
+   *
+   * Marked fixme: the "Create new workflow" button, insertion affordance, and
+   * export button are not yet present in the demo harness.  Remove fixme once
+   * those UI elements land.
+   */
+  test.fixme("create/insert/export flow completes without outbound network requests", async ({
+    page,
+  }) => {
+    const networkRequests: string[] = [];
+    await page.route("**", (route) => {
+      networkRequests.push(route.request().url());
+      route.continue();
+    });
+
+    await openEditor(page);
+
+    const newWorkflowBtn = page.locator(NEW_WORKFLOW_BUTTON_SELECTOR);
+    await newWorkflowBtn.press("Enter");
+
+    // Insert a task.
+    const affordance = page.locator(INSERTION_BUTTON_SELECTOR).first();
+    await affordance.press("Enter");
+    const firstItem = page.locator(TASK_MENU_ITEM_SELECTOR).first();
+    await firstItem.press("Enter");
+
+    // Export the workflow.
+    const exportBtn = page.locator(EXPORT_BUTTON_SELECTOR);
+    await exportBtn.press("Enter");
+
+    const externalRequests = networkRequests.filter(
+      (url) => !url.startsWith("http://localhost") && !url.startsWith("http://127.0.0.1"),
+    );
+
+    expect(
+      externalRequests,
+      `Editor must not initiate external network requests; observed: ${externalRequests.join(", ")}`,
+    ).toHaveLength(0);
+  });
+});
