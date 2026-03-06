@@ -2,7 +2,7 @@
 
 **Feature Branch**: `005-align-example-demo`
 **Created**: 2026-03-06
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "Align example and demo directories. The repo has two directories illustrating library usage: `demo/` (package `@sw-editor/demo`, a Vite app with the custom sw-editor element and e2e harness) and `example/` (contains `vanilla-js/`, `host-events/` sub-apps and Playwright tests in `tests/`). The decision is: keep `example/` as the top-level directory name; rename `demo/` to `example/e2e-harness/` with package name `@sw-editor/example-e2e-harness`. Feature number is 005."
 
 ---
