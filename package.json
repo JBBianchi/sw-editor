@@ -14,11 +14,19 @@
     "test:e2e": "playwright test",
     "test:examples": "playwright test --config example/playwright.config.ts",
     "lint": "biome check .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.5",
     "@playwright/test": "1.58.2",
+    "@storybook/addon-essentials": "^8.6.14",
+    "@storybook/addon-links": "^8.6.18",
+    "@storybook/blocks": "^8.6.14",
+    "@storybook/react": "^8.6.18",
+    "@storybook/react-vite": "^8.6.18",
+    "storybook": "^8.6.18",
     "typescript": "5.9.3",
     "vitest": "4.0.18"
   }
