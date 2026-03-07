@@ -62,6 +62,10 @@ export interface DeterministicLayoutOptions {
 export interface LayoutInputNode {
   /** Unique node identifier. */
   id: string;
+  /** Optional width override for this node (pixels). Falls back to {@link DeterministicLayoutOptions.nodeWidth}. */
+  width?: number;
+  /** Optional height override for this node (pixels). Falls back to {@link DeterministicLayoutOptions.nodeHeight}. */
+  height?: number;
 }
 
 /**
@@ -106,8 +110,8 @@ export function computeDeterministicLayout(
   edges: LayoutInputEdge[],
   options: DeterministicLayoutOptions,
 ): LayoutSnapshot {
-  const nodeWidth = options.nodeWidth ?? DEFAULT_NODE_WIDTH;
-  const nodeHeight = options.nodeHeight ?? DEFAULT_NODE_HEIGHT;
+  const defaultWidth = options.nodeWidth ?? DEFAULT_NODE_WIDTH;
+  const defaultHeight = options.nodeHeight ?? DEFAULT_NODE_HEIGHT;
   const rankSep = options.rankSep ?? DEFAULT_RANK_SEP;
   const nodeSep = options.nodeSep ?? DEFAULT_NODE_SEP;
   const edgeSep = options.edgeSep ?? DEFAULT_EDGE_SEP;
@@ -122,7 +126,9 @@ export function computeDeterministicLayout(
   g.setDefaultEdgeLabel(() => ({}));
 
   for (const node of nodes) {
-    g.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+    const w = node.width ?? defaultWidth;
+    const h = node.height ?? defaultHeight;
+    g.setNode(node.id, { width: w, height: h });
   }
 
   for (const edge of edges) {
@@ -133,12 +139,14 @@ export function computeDeterministicLayout(
 
   const layoutNodes: LayoutNodeFrame[] = nodes.map((node) => {
     const dagreNode = g.node(node.id);
+    const w = node.width ?? defaultWidth;
+    const h = node.height ?? defaultHeight;
     return {
       id: node.id,
-      x: dagreNode.x - nodeWidth / 2,
-      y: dagreNode.y - nodeHeight / 2,
-      width: nodeWidth,
-      height: nodeHeight,
+      x: dagreNode.x - w / 2,
+      y: dagreNode.y - h / 2,
+      width: w,
+      height: h,
     };
   });
 
@@ -153,9 +161,9 @@ export function computeDeterministicLayout(
     const path: Point[] = [];
 
     if (options.orientation === "top-to-bottom") {
-      path.push({ x: sourceNode.x, y: sourceNode.y + nodeHeight / 2 });
+      path.push({ x: sourceNode.x, y: sourceNode.y + sourceNode.height / 2 });
     } else {
-      path.push({ x: sourceNode.x + nodeWidth / 2, y: sourceNode.y });
+      path.push({ x: sourceNode.x + sourceNode.width / 2, y: sourceNode.y });
     }
 
     for (const pt of points) {
@@ -163,9 +171,9 @@ export function computeDeterministicLayout(
     }
 
     if (options.orientation === "top-to-bottom") {
-      path.push({ x: targetNode.x, y: targetNode.y - nodeHeight / 2 });
+      path.push({ x: targetNode.x, y: targetNode.y - targetNode.height / 2 });
     } else {
-      path.push({ x: targetNode.x - nodeWidth / 2, y: targetNode.y });
+      path.push({ x: targetNode.x - targetNode.width / 2, y: targetNode.y });
     }
 
     return {
