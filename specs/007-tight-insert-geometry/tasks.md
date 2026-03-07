@@ -96,7 +96,7 @@
 - [ ] T026 [US3] Integrate shared deterministic layout engine in `packages/editor-renderer-react-flow/src/react-flow-adapter.ts`
 - [ ] T027 [US3] Add orientation-aware handle side mapping in `packages/editor-renderer-react-flow/src/nodes/StartNode.tsx`, `packages/editor-renderer-react-flow/src/nodes/TaskNode.tsx`, and `packages/editor-renderer-react-flow/src/nodes/EndNode.tsx`
 - [ ] T028 [US3] Integrate shared deterministic layout engine and orientation mapping in `packages/editor-renderer-rete-lit/src/rete-lit-adapter.ts`
-- [ ] T029 [US3] Expose renderer layout snapshots for geometry assertions in `packages/editor-renderer-react-flow/src/react-flow-adapter.ts` and `packages/editor-renderer-rete-lit/src/rete-lit-adapter.ts`
+- [X] T029 [US3] Expose renderer layout snapshots for geometry assertions in `packages/editor-renderer-react-flow/src/react-flow-adapter.ts` and `packages/editor-renderer-rete-lit/src/rete-lit-adapter.ts`
 - [ ] T030 [US3] Add orientation mode controls in `example/e2e-harness/index.html` and `example/e2e-harness/main.ts`
 - [ ] T031 [P] [US3] Add determinism and no-overlap regressions using layout snapshots in `tests/integration/repeated-insert-layout.spec.ts`, explicitly validating fixture-matrix runs at up to 25 visible nodes and 30 edges
 

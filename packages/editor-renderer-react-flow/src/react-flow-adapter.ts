@@ -186,6 +186,88 @@ function pathMidpoint(path: Point[]): Point {
 }
 
 /**
+ * Escape a value for use inside a CSS attribute selector.
+ *
+ * @param value - Raw attribute value.
+ * @returns Escaped selector-safe value.
+ */
+function escapeAttrValue(value: string): string {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(value);
+  }
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+/**
+ * Return a deep copy of a layout snapshot.
+ *
+ * @param snapshot - Snapshot to clone.
+ * @returns Cloned snapshot.
+ */
+function cloneLayoutSnapshot(snapshot: LayoutSnapshot): LayoutSnapshot {
+  return {
+    nodes: snapshot.nodes.map((node) => ({ ...node })),
+    edges: snapshot.edges.map((edge) => ({
+      ...edge,
+      path: edge.path.map((point) => ({ ...point })),
+    })),
+  };
+}
+
+/**
+ * Sample an SVG path into viewport-relative points.
+ *
+ * @param pathEl - The path element to sample.
+ * @param containerRect - Bounding rect of the renderer container.
+ * @returns Sampled points, or `null` when SVG geometry APIs are unavailable.
+ */
+function samplePathInViewport(
+  pathEl: SVGPathElement,
+  containerRect: DOMRect,
+): Point[] | null {
+  if (
+    typeof pathEl.getTotalLength !== "function" ||
+    typeof pathEl.getPointAtLength !== "function"
+  ) {
+    return null;
+  }
+
+  try {
+    const total = pathEl.getTotalLength();
+    if (!Number.isFinite(total) || total < 0) {
+      return null;
+    }
+
+    const sampleCount = Math.max(2, Math.min(25, Math.ceil(total / 48) + 1));
+    const ownerSvg = pathEl.ownerSVGElement;
+    const ctm = typeof pathEl.getScreenCTM === "function" ? pathEl.getScreenCTM() : null;
+
+    const points: Point[] = [];
+    for (let i = 0; i < sampleCount; i++) {
+      const lengthAt = sampleCount === 1 ? 0 : (total * i) / (sampleCount - 1);
+      const raw = pathEl.getPointAtLength(lengthAt);
+
+      if (ownerSvg !== null && ctm !== null && typeof ownerSvg.createSVGPoint === "function") {
+        const svgPoint = ownerSvg.createSVGPoint();
+        svgPoint.x = raw.x;
+        svgPoint.y = raw.y;
+        const viewportPoint = svgPoint.matrixTransform(ctm);
+        points.push({
+          x: viewportPoint.x - containerRect.left,
+          y: viewportPoint.y - containerRect.top,
+        });
+      } else {
+        points.push({ x: raw.x, y: raw.y });
+      }
+    }
+
+    return points.length >= 2 ? points : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Convert a {@link RendererGraphNode} to a React Flow {@link Node}.
  *
  * @param node - The renderer graph node to convert.
@@ -456,6 +538,9 @@ export class ReactFlowAdapter implements RendererAdapter {
   /** The React DOM root created during {@link mount}; `null` before mount and after dispose. */
   private root: Root | null = null;
 
+  /** The mounted renderer container used for DOM-geometry queries. */
+  private container: HTMLElement | null = null;
+
   /** Imperative controller used to push graph updates into React state without re-mounting. */
   private controller: FlowController | null = null;
 
@@ -508,6 +593,7 @@ export class ReactFlowAdapter implements RendererAdapter {
     }
 
     this.lastGraph = graph;
+    this.container = container;
     const { nodes, edges, layout } = toRFGraph(graph, this.orientation);
     this.cachedLayout = layout;
     this.root = createRoot(container);
@@ -632,7 +718,7 @@ export class ReactFlowAdapter implements RendererAdapter {
    * @returns The layout snapshot.
    */
   getLayoutSnapshot(): LayoutSnapshot {
-    return this.cachedLayout;
+    return cloneLayoutSnapshot(this.snapshotFromDom());
   }
 
   /**
@@ -714,11 +800,88 @@ export class ReactFlowAdapter implements RendererAdapter {
     this.events.offSelectionChange();
     this.viewportChangeCallback = undefined;
     this.controller = null;
+    this.container = null;
     this.lastGraph = null;
     this.cachedLayout = { nodes: [], edges: [] };
     if (this.root !== null) {
       this.root.unmount();
       this.root = null;
     }
+  }
+
+  /**
+   * Build a snapshot from rendered DOM geometry when available.
+   *
+   * Falls back to cached deterministic layout coordinates for any node or edge
+   * that cannot be resolved from the current DOM.
+   *
+   * @returns Snapshot aligned with current viewport state.
+   */
+  private snapshotFromDom(): LayoutSnapshot {
+    const graph = this.lastGraph;
+    const container = this.container;
+    if (graph === null || container === null) {
+      return this.cachedLayout;
+    }
+
+    const cachedNodeById = new Map(this.cachedLayout.nodes.map((node) => [node.id, node]));
+    const cachedEdgeById = new Map(this.cachedLayout.edges.map((edge) => [edge.id, edge]));
+    const nodeFrameById = new Map<string, LayoutSnapshot["nodes"][number]>();
+    const containerRect = container.getBoundingClientRect();
+
+    const nodes = graph.nodes.map((graphNode) => {
+      const selector = `.react-flow__node[data-id="${escapeAttrValue(graphNode.id)}"]`;
+      const nodeEl = container.querySelector<HTMLElement>(selector);
+      const fallback = cachedNodeById.get(graphNode.id) ?? {
+        id: graphNode.id,
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+      };
+
+      const frame =
+        nodeEl === null
+          ? fallback
+          : {
+              id: graphNode.id,
+              x: nodeEl.getBoundingClientRect().left - containerRect.left,
+              y: nodeEl.getBoundingClientRect().top - containerRect.top,
+              width: nodeEl.getBoundingClientRect().width,
+              height: nodeEl.getBoundingClientRect().height,
+            };
+      nodeFrameById.set(graphNode.id, frame);
+      return frame;
+    });
+
+    const edges = graph.edges.map((graphEdge) => {
+      const fallback = cachedEdgeById.get(graphEdge.id);
+      const selector = `.react-flow__edge[data-id="${escapeAttrValue(graphEdge.id)}"]`;
+      const edgeGroup = container.querySelector<SVGGElement>(selector);
+      const pathEl = edgeGroup?.querySelector<SVGPathElement>("path.react-flow__edge-path, path");
+      const sampledPath =
+        pathEl === undefined || pathEl === null ? null : samplePathInViewport(pathEl, containerRect);
+
+      let path = sampledPath ?? fallback?.path ?? [];
+      if (path.length < 2) {
+        const source = nodeFrameById.get(graphEdge.source);
+        const target = nodeFrameById.get(graphEdge.target);
+        if (source !== undefined && target !== undefined) {
+          path = [
+            { x: source.x + source.width / 2, y: source.y + source.height / 2 },
+            { x: target.x + target.width / 2, y: target.y + target.height / 2 },
+          ];
+        }
+      }
+
+      return {
+        id: graphEdge.id,
+        sourceId: graphEdge.source,
+        targetId: graphEdge.target,
+        path,
+      };
+    });
+
+    return { nodes, edges };
   }
 }
