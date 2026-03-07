@@ -14,6 +14,7 @@ import type {
   FocusTarget,
   LayoutSnapshot,
   OrientationMode,
+  Point,
   RendererAdapter,
   RendererCapabilitySnapshot,
   RendererEdgeAnchor,
@@ -22,6 +23,7 @@ import type {
   RendererSelectionHandler,
   WorkflowGraph,
 } from "@sw-editor/editor-renderer-contract";
+import { computeDeterministicLayout } from "@sw-editor/editor-renderer-contract";
 import type { GetSchemes } from "rete";
 import { ClassicPreset, NodeEditor } from "rete";
 import { AreaExtensions, AreaPlugin } from "rete-area-plugin";
@@ -237,6 +239,57 @@ class TrackingSelector extends AreaExtensions.Selector<SelectorEntity> {
 }
 
 // ---------------------------------------------------------------------------
+// Path midpoint helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute the midpoint of an edge path by walking cumulative segment lengths.
+ *
+ * Interpolates the point at exactly half the total path length, handling
+ * both straight and multi-segment (curved/routed) paths.
+ *
+ * @param path - Ordered list of points forming the edge path.
+ * @returns The point at the midpoint of the path's total length.
+ */
+function pathMidpoint(path: Point[]): Point {
+  if (path.length < 2) {
+    return path[0] ?? { x: 0, y: 0 };
+  }
+
+  let totalLength = 0;
+  const segmentLengths: number[] = [];
+  for (let i = 1; i < path.length; i++) {
+    const prev = path[i - 1] as Point;
+    const curr = path[i] as Point;
+    const dx = curr.x - prev.x;
+    const dy = curr.y - prev.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    segmentLengths.push(len);
+    totalLength += len;
+  }
+
+  const halfLength = totalLength / 2;
+  let accumulated = 0;
+
+  for (let i = 0; i < segmentLengths.length; i++) {
+    const segLen = segmentLengths[i] as number;
+    if (accumulated + segLen >= halfLength) {
+      const from = path[i] as Point;
+      const to = path[i + 1] as Point;
+      const t = segLen === 0 ? 0 : (halfLength - accumulated) / segLen;
+      return {
+        x: from.x + t * (to.x - from.x),
+        y: from.y + t * (to.y - from.y),
+      };
+    }
+    accumulated += segLen;
+  }
+
+  // Fallback: return the last point (should not normally be reached).
+  return path[path.length - 1] as Point;
+}
+
+// ---------------------------------------------------------------------------
 // Adapter
 // ---------------------------------------------------------------------------
 
@@ -339,6 +392,22 @@ export class ReteLitAdapter implements RendererAdapter {
   /** The current graph orientation mode. */
   private orientation: OrientationMode = "top-to-bottom";
 
+  /**
+   * Cached dagre layout snapshot computed during {@link applyGraph}.
+   * Kept in sync with {@link lastGraph} so that {@link getEdgeAnchor},
+   * {@link getLayoutSnapshot}, and {@link getInsertionAnchors} return
+   * correct positions immediately after an update.
+   */
+  private cachedLayout: LayoutSnapshot = { nodes: [], edges: [] };
+
+  /**
+   * Whether cached insertion anchors need recomputation.
+   *
+   * Set to `true` on viewport change; cleared when {@link getInsertionAnchors}
+   * recomputes the layout.
+   */
+  private anchorsDirty = false;
+
   /** The currently registered viewport-change callback, if any. */
   private viewportChangeCallback: (() => void) | undefined;
 
@@ -389,6 +458,15 @@ export class ReteLitAdapter implements RendererAdapter {
     });
     AreaExtensions.simpleNodesOrder(area);
 
+    // Listen for viewport changes (pan/zoom) to invalidate cached anchors.
+    area.addPipe((context) => {
+      if (context.type === "translated" || context.type === "zoomed") {
+        this.anchorsDirty = true;
+        this.viewportChangeCallback?.();
+      }
+      return context;
+    });
+
     this.mounted = { editor, area, container };
     this.lastGraph = graph;
 
@@ -399,9 +477,9 @@ export class ReteLitAdapter implements RendererAdapter {
    * Re-render the graph with updated data.
    *
    * Clears the current Rete editor state and repopulates it from the supplied
-   * `graph`. Node positions are reset to a simple horizontal layout on each
-   * update; a diff-based approach can replace this when incremental update
-   * performance becomes a requirement.
+   * `graph`. Node positions are recomputed using the deterministic dagre
+   * layout on each update; a diff-based approach can replace this when
+   * incremental update performance becomes a requirement.
    *
    * @param graph - The updated workflow graph to display.
    * @throws If called before {@link mount}.
@@ -417,77 +495,31 @@ export class ReteLitAdapter implements RendererAdapter {
   /**
    * Retrieve the visual anchor point for the given edge.
    *
-   * Calculates the geometric midpoint between the source and target node
-   * positions in the Rete area. Returns `null` if the adapter is not mounted,
-   * the edge is unknown, or the node views are unavailable.
+   * Computes the geometric midpoint of the edge path from the cached dagre
+   * layout. Because the layout cache is updated synchronously in
+   * {@link applyGraph}, anchors for newly created edges are available
+   * immediately after an {@link update} call.
+   *
+   * Returns `null` if the edge is not found in the cached layout or the
+   * adapter is not mounted.
    *
    * @param edgeId - The workflow graph edge identity to query.
    * @returns The edge anchor with midpoint coordinates, or `null` if unavailable.
    */
   getEdgeAnchor(edgeId: string): RendererEdgeAnchor | null {
-    if (this.mounted === null) return null;
-
-    const { editor, area } = this.mounted;
-
-    // Try Rete-internal views first (most accurate after layout settles).
-    const reteConnId = this.graphIdToReteConn.get(edgeId);
-    if (reteConnId !== undefined) {
-      const conn = editor.getConnection(reteConnId);
-      if (conn !== undefined) {
-        const sourceView = area.nodeViews.get(conn.source);
-        const targetView = area.nodeViews.get(conn.target);
-        if (sourceView !== undefined && targetView !== undefined) {
-          const sourceGraphId = this.reteNodeToGraphId.get(conn.source);
-          const targetGraphId = this.reteNodeToGraphId.get(conn.target);
-          if (sourceGraphId !== undefined && targetGraphId !== undefined) {
-            return {
-              edgeId,
-              sourceNodeId: sourceGraphId,
-              targetNodeId: targetGraphId,
-              x: (sourceView.position.x + targetView.position.x) / 2,
-              y: (sourceView.position.y + targetView.position.y) / 2,
-            };
-          }
-        }
-      }
+    const edgeFrame = this.cachedLayout.edges.find((e) => e.id === edgeId);
+    if (!edgeFrame || edgeFrame.path.length < 2) {
+      return null;
     }
 
-    // Fallback: compute positions synchronously from the cached graph so that
-    // edge anchors are available immediately after update(), even before the
-    // async Rete layout has settled.
-    return this.getEdgeAnchorFromGraph(edgeId);
-  }
-
-  /**
-   * Compute an edge anchor synchronously from the cached {@link lastGraph}.
-   *
-   * Uses the same linear layout formula (`index * NODE_GAP`) to derive node
-   * positions without depending on Rete node views, ensuring anchors are
-   * available immediately after an {@link update} call.
-   *
-   * @param edgeId - The workflow graph edge identity to query.
-   * @returns The edge anchor with midpoint coordinates, or `null` if unavailable.
-   */
-  private getEdgeAnchorFromGraph(edgeId: string): RendererEdgeAnchor | null {
-    if (this.lastGraph === null) return null;
-
-    const edge = this.lastGraph.edges.find((e) => e.id === edgeId);
-    if (edge === undefined) return null;
-
-    const sourceIndex = this.lastGraph.nodes.findIndex((n) => n.id === edge.source);
-    const targetIndex = this.lastGraph.nodes.findIndex((n) => n.id === edge.target);
-    if (sourceIndex < 0 || targetIndex < 0) return null;
-
-    const NODE_GAP = 220;
-    const sourceX = sourceIndex * NODE_GAP;
-    const targetX = targetIndex * NODE_GAP;
+    const mid = pathMidpoint(edgeFrame.path);
 
     return {
       edgeId,
-      sourceNodeId: edge.source,
-      targetNodeId: edge.target,
-      x: (sourceX + targetX) / 2,
-      y: 0,
+      sourceNodeId: edgeFrame.sourceId,
+      targetNodeId: edgeFrame.targetId,
+      x: mid.x,
+      y: mid.y,
     };
   }
 
@@ -609,49 +641,13 @@ export class ReteLitAdapter implements RendererAdapter {
    * Return a point-in-time snapshot of all node and edge positions in the
    * current layout.
    *
-   * Node frames are derived from the Rete area node views when mounted,
-   * falling back to the cached graph with computed linear positions.
-   * Edge frames use source and target node positions as a two-point path.
+   * Returns the cached dagre layout computed during the most recent
+   * {@link applyGraph} call.
    *
    * @returns The layout snapshot.
    */
   getLayoutSnapshot(): LayoutSnapshot {
-    if (this.lastGraph === null) {
-      return { nodes: [], edges: [] };
-    }
-
-    const NODE_GAP = 220;
-    const nodeFrames = this.lastGraph.nodes.map((n, i) => {
-      let x = i * NODE_GAP;
-      let y = 0;
-      if (this.mounted !== null) {
-        const reteId = this.graphIdToReteNode.get(n.id);
-        if (reteId !== undefined) {
-          const view = this.mounted.area.nodeViews.get(reteId);
-          if (view !== undefined) {
-            x = view.position.x;
-            y = view.position.y;
-          }
-        }
-      }
-      return { id: n.id, x, y, width: 180, height: 40 };
-    });
-
-    const edgeFrames = this.lastGraph.edges.map((e) => {
-      const srcFrame = nodeFrames.find((f) => f.id === e.source);
-      const tgtFrame = nodeFrames.find((f) => f.id === e.target);
-      return {
-        id: e.id,
-        sourceId: e.source,
-        targetId: e.target,
-        path: [
-          { x: srcFrame?.x ?? 0, y: srcFrame?.y ?? 0 },
-          { x: tgtFrame?.x ?? 0, y: tgtFrame?.y ?? 0 },
-        ],
-      };
-    });
-
-    return { nodes: nodeFrames, edges: edgeFrames };
+    return this.cachedLayout;
   }
 
   /**
@@ -660,14 +656,21 @@ export class ReteLitAdapter implements RendererAdapter {
    * Each anchor represents the midpoint of an edge where an inline "add
    * task" control can be positioned. When the adapter is mounted and SVG
    * path elements are available in the DOM, the midpoint is computed from
-   * the actual rendered path using the SVG DOM API (`getTotalLength` /
-   * `getPointAtLength`), which accurately handles curved and straight
-   * edge paths. Falls back to node-position averaging when SVG paths are
-   * unavailable (e.g., before layout settles or in headless test environments).
+   * the actual rendered path using the SVG DOM API. Falls back to the
+   * cached dagre layout edge paths for midpoint computation.
    *
    * @returns An array of edge insertion anchors.
    */
   getInsertionAnchors(): EdgeInsertionAnchor[] {
+    if (this.anchorsDirty && this.lastGraph !== null) {
+      this.cachedLayout = computeDeterministicLayout(
+        this.lastGraph.nodes.map((n) => ({ id: n.id })),
+        this.lastGraph.edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
+        { orientation: this.orientation },
+      );
+      this.anchorsDirty = false;
+    }
+
     if (this.lastGraph === null) {
       return [];
     }
@@ -677,11 +680,12 @@ export class ReteLitAdapter implements RendererAdapter {
       if (svgAnchor !== null) {
         return [svgAnchor];
       }
-      const anchor = this.getEdgeAnchor(e.id);
-      if (anchor === null) {
+      const edgeFrame = this.cachedLayout.edges.find((f) => f.id === e.id);
+      if (!edgeFrame || edgeFrame.path.length < 2) {
         return [];
       }
-      return [{ edgeId: e.id, x: anchor.x, y: anchor.y }];
+      const mid = pathMidpoint(edgeFrame.path);
+      return [{ edgeId: e.id, x: mid.x, y: mid.y }];
     });
   }
 
@@ -736,6 +740,7 @@ export class ReteLitAdapter implements RendererAdapter {
     this.graphIdToReteNode.clear();
     this.graphIdToReteConn.clear();
     this.lastGraph = null;
+    this.cachedLayout = { nodes: [], edges: [] };
     this.mounted = null;
   }
 
@@ -743,9 +748,9 @@ export class ReteLitAdapter implements RendererAdapter {
    * Synchronise the Rete editor to the supplied graph snapshot.
    *
    * Clears all existing nodes and connections, then adds nodes and edges from
-   * `graph`. Nodes are laid out in a simple left-to-right sequence with a
-   * fixed horizontal gap. The viewport is adjusted to fit all nodes after
-   * population.
+   * `graph`. Node positions are computed by the shared dagre-based
+   * deterministic layout helper using the current orientation mode. The
+   * viewport is adjusted to fit all nodes after population.
    *
    * If the adapter is disposed before this async operation completes (e.g.
    * because the consumer called {@link dispose} immediately after
@@ -771,12 +776,22 @@ export class ReteLitAdapter implements RendererAdapter {
     this.graphIdToReteNode.clear();
     this.graphIdToReteConn.clear();
 
+    // Compute deterministic dagre layout before adding nodes to the editor.
+    const layout = computeDeterministicLayout(
+      graph.nodes.map((n) => ({ id: n.id })),
+      graph.edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
+      { orientation: this.orientation },
+    );
+    this.cachedLayout = layout;
+    this.anchorsDirty = false;
+
+    const positionMap = new Map<string, { x: number; y: number }>();
+    for (const frame of layout.nodes) {
+      positionMap.set(frame.id, { x: frame.x, y: frame.y });
+    }
+
     const socket = new ClassicPreset.Socket("workflow");
     const reteNodeMap = new Map<string, ClassicPreset.Node>();
-
-    /** Horizontal spacing between nodes in the default layout (pixels). */
-    const NODE_GAP = 220;
-    let xOffset = 0;
 
     for (const graphNode of graph.nodes) {
       if (generation !== this.applyGeneration) return;
@@ -786,9 +801,8 @@ export class ReteLitAdapter implements RendererAdapter {
       node.addInput("in", new ClassicPreset.Input(socket));
 
       await editor.addNode(node);
-      await area.translate(node.id, { x: xOffset, y: 0 });
-
-      xOffset += NODE_GAP;
+      const pos = positionMap.get(graphNode.id) ?? { x: 0, y: 0 };
+      await area.translate(node.id, pos);
 
       this.reteNodeToGraphId.set(node.id, graphNode.id);
       this.graphIdToReteNode.set(graphNode.id, node.id);
