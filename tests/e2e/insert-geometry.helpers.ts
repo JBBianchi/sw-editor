@@ -254,6 +254,57 @@ export async function panAndZoom(
 }
 
 /**
+ * Wait for the harness to signal that a layout-changing operation has settled.
+ *
+ * The `sw-editor` element exposes `data-layout-generation` (incremented before
+ * each layout op) and `data-layout-settled` (set to the same value after the
+ * deferred affordance rebuild completes). This function waits until the two
+ * attributes match, providing a deterministic readiness check that does not
+ * rely on position-polling heuristics.
+ *
+ * Falls back to {@link waitForAnchorStabilization} when the attributes are
+ * absent (e.g. older harness versions without the signal).
+ *
+ * @param page - The Playwright {@link Page} instance.
+ * @param timeout - Maximum milliseconds to wait (default `5000`).
+ */
+export async function waitForLayoutSettled(page: Page, timeout = 5_000): Promise<void> {
+  const editor = page.locator("sw-editor").first();
+
+  try {
+    await editor.waitFor({ state: "attached", timeout: 2_000 });
+  } catch {
+    // Editor element not found; fall back to position-based stabilization.
+    await waitForAnchorStabilization(page);
+    return;
+  }
+
+  const hasSignal = await editor.evaluate((el) => el.dataset.layoutGeneration !== undefined);
+
+  if (!hasSignal) {
+    // Harness does not expose the settling signal; fall back.
+    await waitForAnchorStabilization(page);
+    return;
+  }
+
+  // Wait until data-layout-settled matches data-layout-generation.
+  await page.waitForFunction(
+    (selector: string) => {
+      const el = document.querySelector(selector);
+      if (!el || !(el instanceof HTMLElement)) return false;
+      const gen = el.dataset.layoutGeneration;
+      const settled = el.dataset.layoutSettled;
+      return gen !== undefined && settled !== undefined && gen === settled;
+    },
+    "sw-editor",
+    { timeout },
+  );
+
+  // Allow one additional frame for any pending paint/reflow.
+  await page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => r())));
+}
+
+/**
  * Wait until insertion anchor positions have settled after a viewport or
  * graph change.
  *
@@ -271,7 +322,7 @@ export async function waitForAnchorStabilization(page: Page): Promise<void> {
   // If no affordances exist yet, wait for at least one to appear (up to 5 s).
   // This handles the gap between orientation-triggered DOM teardown and the
   // renderer rebuilding affordance buttons.
-  let count = await buttons.count();
+  const count = await buttons.count();
   if (count === 0) {
     try {
       await buttons.first().waitFor({ state: "attached", timeout: 5_000 });

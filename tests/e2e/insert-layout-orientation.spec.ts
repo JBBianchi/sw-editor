@@ -11,7 +11,11 @@
  */
 
 import { expect, type Page, test } from "@playwright/test";
-import { assertAffordanceWithinTolerance, waitForAnchorStabilization } from "./insert-geometry.helpers";
+import {
+  assertAffordanceWithinTolerance,
+  waitForAnchorStabilization,
+  waitForLayoutSettled,
+} from "./insert-geometry.helpers";
 
 // ---------------------------------------------------------------------------
 // Selectors and constants
@@ -24,7 +28,7 @@ const EDITOR_ELEMENT = "sw-editor";
 const NEW_WORKFLOW_BUTTON_SELECTOR = 'button[aria-label="Create new workflow"]';
 
 /** Orientation mode selector added in the e2e harness toolbar. */
-const ORIENTATION_SELECT_SELECTOR = '#orientation-select';
+const ORIENTATION_SELECT_SELECTOR = "#orientation-select";
 
 /** Insertion affordance buttons attached to graph edges. */
 const INSERT_BUTTON_SELECTOR = 'button[aria-label="Insert task"]';
@@ -108,7 +112,10 @@ async function createNewWorkflow(page: Page): Promise<void> {
 async function setOrientation(page: Page, mode: OrientationMode): Promise<void> {
   await page.locator(ORIENTATION_SELECT_SELECTOR).selectOption(mode);
 
-  // Wait for at least one rendered edge element to appear in the DOM.
+  // Use the deterministic settling signal exposed by the harness, then
+  // confirm edge elements are present and anchors are position-stable.
+  await waitForLayoutSettled(page);
+
   const edgeSelector = '[data-testid^="rf__edge-"], [data-connection-id]';
   await page.locator(edgeSelector).first().waitFor({ state: "attached", timeout: 5_000 });
 
@@ -154,24 +161,22 @@ async function getRenderedEdgeIds(page: Page): Promise<string[]> {
   const isReactFlow = page.url().includes("renderer=react-flow");
   const selector = isReactFlow ? '[data-testid^="rf__edge-"]' : "[data-connection-id]";
 
-  const domIds = await page
-    .locator(selector)
-    .evaluateAll((elements) => {
-      const ids: string[] = [];
-      for (const el of elements) {
-        const rfId = el.getAttribute("data-testid");
-        if (rfId && rfId.startsWith("rf__edge-")) {
-          ids.push(rfId.slice("rf__edge-".length));
-          continue;
-        }
-
-        const reteId = el.getAttribute("data-connection-id");
-        if (reteId) {
-          ids.push(reteId);
-        }
+  const domIds = await page.locator(selector).evaluateAll((elements) => {
+    const ids: string[] = [];
+    for (const el of elements) {
+      const rfId = el.getAttribute("data-testid");
+      if (rfId?.startsWith("rf__edge-")) {
+        ids.push(rfId.slice("rf__edge-".length));
+        continue;
       }
-      return ids;
-    });
+
+      const reteId = el.getAttribute("data-connection-id");
+      if (reteId) {
+        ids.push(reteId);
+      }
+    }
+    return ids;
+  });
 
   return [...new Set(domIds)];
 }
@@ -207,14 +212,17 @@ async function assertAllAffordancesAligned(page: Page): Promise<void> {
   // than transient DOM timing differences.
   const mappableCount = Math.min(buttonCount, edgeIdsFromDom.length);
 
-  await page.evaluate(({ edgeIds, count }: { edgeIds: string[]; count: number }) => {
-    const buttons = Array.from(
-      document.querySelectorAll<HTMLButtonElement>('button[aria-label="Insert task"]'),
-    );
-    for (let i = 0; i < count; i++) {
-      buttons[i]?.setAttribute("data-edge-id", edgeIds[i] as string);
-    }
-  }, { edgeIds: edgeIdsFromDom, count: mappableCount });
+  await page.evaluate(
+    ({ edgeIds, count }: { edgeIds: string[]; count: number }) => {
+      const buttons = Array.from(
+        document.querySelectorAll<HTMLButtonElement>('button[aria-label="Insert task"]'),
+      );
+      for (let i = 0; i < count; i++) {
+        buttons[i]?.setAttribute("data-edge-id", edgeIds[i] as string);
+      }
+    },
+    { edgeIds: edgeIdsFromDom, count: mappableCount },
+  );
 
   for (let i = 0; i < mappableCount; i++) {
     await assertAffordanceWithinTolerance(page, edgeIdsFromDom[i] as string, MIDPOINT_TOLERANCE_PX);
@@ -427,7 +435,9 @@ async function assertPortSidesMatchOrientation(page: Page, mode: OrientationMode
   const startCenter = centerOf(startBox);
 
   const endpoints =
-    edgeIds.length > 0 ? await getEdgeEndpoints(page, edgeIds[0] as string) : await getFirstEdgeEndpoints(page);
+    edgeIds.length > 0
+      ? await getEdgeEndpoints(page, edgeIds[0] as string)
+      : await getFirstEdgeEndpoints(page);
 
   // Determine source endpoint as the endpoint closest to the start node center.
   const distanceFromStartA = distance(endpoints.start, startCenter);
@@ -446,12 +456,14 @@ async function assertPortSidesMatchOrientation(page: Page, mode: OrientationMode
     expect(targetSide.side, "End incoming port side in TB mode").toBe("top");
   }
 
-  expect(sourceSide.distancePx, "Source endpoint should be close to expected node side").toBeLessThanOrEqual(
-    PORT_SIDE_TOLERANCE_PX,
-  );
-  expect(targetSide.distancePx, "Target endpoint should be close to expected node side").toBeLessThanOrEqual(
-    PORT_SIDE_TOLERANCE_PX,
-  );
+  expect(
+    sourceSide.distancePx,
+    "Source endpoint should be close to expected node side",
+  ).toBeLessThanOrEqual(PORT_SIDE_TOLERANCE_PX);
+  expect(
+    targetSide.distancePx,
+    "Target endpoint should be close to expected node side",
+  ).toBeLessThanOrEqual(PORT_SIDE_TOLERANCE_PX);
 }
 
 // ---------------------------------------------------------------------------
@@ -466,6 +478,7 @@ for (const renderer of RENDERERS) {
     test.beforeEach(async ({ page }) => {
       await openEditor(page, renderer.urlSuffix);
       await createNewWorkflow(page);
+      await waitForLayoutSettled(page);
       await waitForAnchorStabilization(page);
     });
 
