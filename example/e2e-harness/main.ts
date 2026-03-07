@@ -180,45 +180,44 @@ class SwEditorElement extends HTMLElement {
    * Synchronises insertion affordance buttons with the current graph edges.
    *
    * Removes all existing affordance buttons and creates one new button per
-   * edge in {@link #graph}. Buttons are appended directly to `this` (the
-   * sw-editor element) with absolute positioning so they appear above the
-   * rete canvas without being clipped by its `overflow: hidden` style.
+   * edge using renderer-provided anchor coordinates. Buttons are appended
+   * directly to `this` (the sw-editor element) with absolute positioning so
+   * they appear above the rete canvas without being clipped by its
+   * `overflow: hidden` style.
    */
   #syncAffordances(): void {
     for (const el of Array.from(this.querySelectorAll(".sw-insertion-affordance"))) {
       el.remove();
     }
 
-    if (!this.#graph) return;
+    if (!this.#adapter) return;
 
-    // Position affordances relative to edge index so multiple affordances are
-    // visually distinct. This is intentionally simplified for the demo; a
-    // production implementation would use the actual edge midpoint coordinates
-    // from the renderer.
-    this.#graph.edges.forEach((edge, index) => {
-      this.#addAffordanceForEdge(edge.id, index);
-    });
+    const anchors = this.#adapter.getInsertionAnchors();
+    for (const anchor of anchors) {
+      this.#addAffordanceForEdge(anchor.edgeId, anchor.x, anchor.y);
+    }
   }
 
   /**
    * Creates and appends a single insertion affordance button for the given edge.
    *
    * @param edgeId - Stable ID of the graph edge this affordance targets.
-   * @param index - Zero-based position index used for simple visual layout.
+   * @param x - Horizontal pixel coordinate from the renderer anchor.
+   * @param y - Vertical pixel coordinate from the renderer anchor.
    */
-  #addAffordanceForEdge(edgeId: string, index: number): void {
+  #addAffordanceForEdge(edgeId: string, x: number, y: number): void {
     const button = document.createElement("button");
     button.type = "button";
     button.setAttribute("aria-label", "Insert task");
     button.className = "sw-insertion-affordance";
     button.textContent = "+";
 
-    // Simple absolute positioning relative to the sw-editor container.
-    // Multiple affordances are stacked vertically so each is visible.
+    // Position at the renderer-provided anchor point, centered on the
+    // midpoint so the button sits directly on the edge.
     button.style.position = "absolute";
-    button.style.top = `${20 + index * 30}px`;
-    button.style.left = "50%";
-    button.style.transform = "translateX(-50%)";
+    button.style.left = `${x}px`;
+    button.style.top = `${y}px`;
+    button.style.transform = "translate(-50%, -50%)";
     button.style.zIndex = "10";
     button.style.cursor = "pointer";
 
