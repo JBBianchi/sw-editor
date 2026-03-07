@@ -10,7 +10,11 @@
   "scripts": {
     "build": "tsc --noEmit"
   },
+  "dependencies": {
+    "dagre": "^0.8.5"
+  },
   "devDependencies": {
+    "@types/dagre": "^0.7.54",
     "typescript": "5.9.3"
   }
 }
