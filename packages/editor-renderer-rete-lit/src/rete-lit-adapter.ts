@@ -248,6 +248,7 @@ class TrackingSelector extends AreaExtensions.Selector<SelectorEntity> {
 interface MountedState {
   readonly editor: NodeEditor<Schemes>;
   readonly area: AreaPlugin<Schemes, AreaExtra>;
+  readonly container: HTMLElement;
 }
 
 /**
@@ -388,7 +389,7 @@ export class ReteLitAdapter implements RendererAdapter {
     });
     AreaExtensions.simpleNodesOrder(area);
 
-    this.mounted = { editor, area };
+    this.mounted = { editor, area, container };
     this.lastGraph = graph;
 
     void this.applyGraph(graph);
@@ -491,6 +492,93 @@ export class ReteLitAdapter implements RendererAdapter {
   }
 
   /**
+   * Compute an edge insertion anchor from the rendered SVG path element.
+   *
+   * Queries the mounted container for the SVG `<path>` element that
+   * corresponds to the given edge and computes its geometric midpoint
+   * using the SVG DOM API. This produces accurate viewport-space
+   * coordinates for both curved (Bézier) and straight edge paths.
+   *
+   * Returns `null` when the adapter is not mounted, the edge is unknown,
+   * or the SVG path element is not present in the DOM (e.g., before the
+   * render plugin has painted the connection or in headless environments).
+   *
+   * @param edgeId - The workflow graph edge identity to query.
+   * @returns The insertion anchor at the path midpoint, or `null` if unavailable.
+   */
+  private getAnchorFromRenderedPath(edgeId: string): EdgeInsertionAnchor | null {
+    if (this.mounted === null) return null;
+
+    const reteConnId = this.graphIdToReteConn.get(edgeId);
+    if (reteConnId === undefined) return null;
+
+    const pathEl = this.findConnectionPathElement(reteConnId);
+    if (pathEl === null) return null;
+
+    try {
+      const totalLength = pathEl.getTotalLength();
+      const midpoint = pathEl.getPointAtLength(totalLength / 2);
+
+      // The SVG path coordinates produced by the Rete connection renderer
+      // are in the same coordinate space as node positions (area space).
+      // When a getScreenCTM is available we use it together with the
+      // container's bounding rect to derive precise viewport-relative
+      // coordinates; otherwise we return the raw SVG coordinates which are
+      // already in area space.
+      const ownerSvg = pathEl.ownerSVGElement;
+      const screenCTM = pathEl.getScreenCTM();
+      if (ownerSvg !== null && screenCTM !== null) {
+        const svgPt = ownerSvg.createSVGPoint();
+        svgPt.x = midpoint.x;
+        svgPt.y = midpoint.y;
+        const screenPt = svgPt.matrixTransform(screenCTM);
+
+        const containerRect = this.mounted.container.getBoundingClientRect();
+        return {
+          edgeId,
+          x: screenPt.x - containerRect.left,
+          y: screenPt.y - containerRect.top,
+        };
+      }
+
+      return { edgeId, x: midpoint.x, y: midpoint.y };
+    } catch {
+      // SVG geometry API unavailable (e.g., JSDOM without SVG support).
+      return null;
+    }
+  }
+
+  /**
+   * Locate the SVG `<path>` element rendered for a Rete connection.
+   *
+   * Searches the mounted container for known selector patterns used by the
+   * Rete area plugin and render plugins to wrap connection elements.
+   *
+   * @param reteConnId - The Rete-internal connection identity.
+   * @returns The SVG path element, or `null` if not found.
+   */
+  private findConnectionPathElement(reteConnId: string): SVGPathElement | null {
+    if (this.mounted === null) return null;
+
+    const { container } = this.mounted;
+
+    // Rete area plugin / render plugins use data-testid on connection wrappers.
+    const selectors = [
+      `[data-testid="connection-${reteConnId}"] path`,
+      `[data-connection-id="${reteConnId}"] path`,
+    ];
+
+    for (const selector of selectors) {
+      const el = container.querySelector<SVGPathElement>(selector);
+      if (el !== null && typeof el.getTotalLength === "function") {
+        return el;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Bring a node into view in the renderer viewport.
    *
    * Scrolls and zooms the viewport to center the target node using
@@ -570,7 +658,12 @@ export class ReteLitAdapter implements RendererAdapter {
    * Return insertion anchor points for all currently rendered edges.
    *
    * Each anchor represents the midpoint of an edge where an inline "add
-   * task" control can be positioned.
+   * task" control can be positioned. When the adapter is mounted and SVG
+   * path elements are available in the DOM, the midpoint is computed from
+   * the actual rendered path using the SVG DOM API (`getTotalLength` /
+   * `getPointAtLength`), which accurately handles curved and straight
+   * edge paths. Falls back to node-position averaging when SVG paths are
+   * unavailable (e.g., before layout settles or in headless test environments).
    *
    * @returns An array of edge insertion anchors.
    */
@@ -580,6 +673,10 @@ export class ReteLitAdapter implements RendererAdapter {
     }
 
     return this.lastGraph.edges.flatMap((e) => {
+      const svgAnchor = this.getAnchorFromRenderedPath(e.id);
+      if (svgAnchor !== null) {
+        return [svgAnchor];
+      }
       const anchor = this.getEdgeAnchor(e.id);
       if (anchor === null) {
         return [];
