@@ -421,6 +421,22 @@ class SwEditorElement extends HTMLElement {
   }
 
   /**
+   * Switches the layout orientation and re-renders the graph.
+   *
+   * Called by the orientation select control in the toolbar. Delegates to
+   * the adapter's `setOrientation`, then refreshes affordances and task
+   * node markers so insert buttons re-anchor to the new layout positions.
+   *
+   * @param mode - `"top-to-bottom"` or `"left-to-right"`.
+   */
+  setOrientation(mode: "top-to-bottom" | "left-to-right"): void {
+    if (!this.#adapter) return;
+    this.#adapter.setOrientation(mode);
+    this.#syncAffordances();
+    this.#syncTaskNodes();
+  }
+
+  /**
    * Loads a YAML workflow source string into the editor.
    *
    * Parses the content, projects the parsed model to a visual graph, and
@@ -569,3 +585,25 @@ function wireRendererSelect(): void {
 }
 
 wireRendererSelect();
+
+// ---------------------------------------------------------------------------
+// Orientation switcher wiring
+// ---------------------------------------------------------------------------
+
+/**
+ * Wires the `#orientation-select` element so that choosing an orientation
+ * calls `setOrientation()` on the `sw-editor` element, triggering a live
+ * re-layout without a page reload.
+ */
+function wireOrientationSelect(): void {
+  const select = document.querySelector<HTMLSelectElement>("#orientation-select");
+  const editorEl = document.getElementById("editor") as SwEditorElement | null;
+  if (!select || !editorEl) return;
+
+  select.addEventListener("change", () => {
+    const mode = select.value as "top-to-bottom" | "left-to-right";
+    editorEl.setOrientation(mode);
+  });
+}
+
+wireOrientationSelect();
