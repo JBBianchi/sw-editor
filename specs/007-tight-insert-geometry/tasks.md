@@ -89,7 +89,7 @@
 ### Tests for User Story 3
 
 - [ ] T024 [P] [US3] Add orientation port-side and direction assertions in `tests/integration/orientation-layout.spec.ts`
-- [ ] T025 [P] [US3] Add orientation switch e2e validations in `tests/e2e/insert-layout-orientation.spec.ts`
+- [X] T025 [P] [US3] Add orientation switch e2e validations in `tests/e2e/insert-layout-orientation.spec.ts`
 
 ### Implementation for User Story 3
 
