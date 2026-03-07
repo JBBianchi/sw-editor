@@ -259,7 +259,9 @@ function toRFGraph(
   }
 
   return {
-    nodes: graph.nodes.map((n) => toRFNode(n, positionMap.get(n.id) ?? { x: 0, y: 0 }, orientation)),
+    nodes: graph.nodes.map((n) =>
+      toRFNode(n, positionMap.get(n.id) ?? { x: 0, y: 0 }, orientation),
+    ),
     edges: graph.edges.map((e) => toRFEdge(e)),
     layout,
   };

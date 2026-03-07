@@ -8,11 +8,10 @@
  * @module
  */
 
+import type { OrientationMode } from "@sw-editor/editor-renderer-contract";
 import { Handle, type NodeProps, Position } from "@xyflow/react";
 // biome-ignore lint/style/useImportType: React is a value import required by jsx:"react" compilation
 import React from "react";
-
-import type { OrientationMode } from "@sw-editor/editor-renderer-contract";
 
 /** Data shape carried by start nodes. */
 export interface StartNodeData {
@@ -36,8 +35,7 @@ export interface StartNodeData {
  */
 export function StartNode(props: NodeProps): React.ReactElement {
   const data = props.data as StartNodeData;
-  const sourcePosition =
-    data.orientation === "left-to-right" ? Position.Right : Position.Bottom;
+  const sourcePosition = data.orientation === "left-to-right" ? Position.Right : Position.Bottom;
   return (
     <div
       style={{

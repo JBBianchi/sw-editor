@@ -8,11 +8,10 @@
  * @module
  */
 
+import type { OrientationMode } from "@sw-editor/editor-renderer-contract";
 import { Handle, type NodeProps, Position } from "@xyflow/react";
 // biome-ignore lint/style/useImportType: React is a value import required by jsx:"react" compilation
 import React from "react";
-
-import type { OrientationMode } from "@sw-editor/editor-renderer-contract";
 
 /** Data shape carried by task nodes. */
 export interface TaskNodeData {
