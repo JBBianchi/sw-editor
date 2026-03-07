@@ -606,6 +606,60 @@ describe("InsertionUI", () => {
       expect(adapter.getEdgeAnchor).toHaveBeenCalledWith(INITIAL_EDGE_ID);
     });
 
+    it("hides the affordance when a previously valid anchor becomes null", () => {
+      const adapter = makeMockRendererAdapter({
+        edgeId: INITIAL_EDGE_ID,
+        sourceNodeId: "s",
+        targetNodeId: "t",
+        x: 100,
+        y: 200,
+      });
+      const { ui } = makeHarnessWithAdapter(adapter);
+
+      const el = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, el);
+      expect(el.querySelector("button.sw-insertion-affordance")).not.toBeNull();
+
+      // Anchor becomes unavailable on next query.
+      adapter.getEdgeAnchor.mockReturnValue(null);
+
+      const el2 = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, el2);
+      expect(el2.querySelector("button.sw-insertion-affordance")).toBeNull();
+    });
+
+    it("applies different coordinates when the adapter returns a new anchor position", () => {
+      const adapter = makeMockRendererAdapter({
+        edgeId: INITIAL_EDGE_ID,
+        sourceNodeId: "s",
+        targetNodeId: "t",
+        x: 10,
+        y: 20,
+      });
+      const { ui } = makeHarnessWithAdapter(adapter);
+
+      const el1 = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, el1);
+      const btn1 = el1.querySelector<HTMLButtonElement>("button.sw-insertion-affordance");
+      expect(btn1?.style.left).toBe("10px");
+      expect(btn1?.style.top).toBe("20px");
+
+      // Adapter now reports a different midpoint.
+      adapter.getEdgeAnchor.mockReturnValue({
+        edgeId: INITIAL_EDGE_ID,
+        sourceNodeId: "s",
+        targetNodeId: "t",
+        x: 300,
+        y: 400,
+      });
+
+      const el2 = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, el2);
+      const btn2 = el2.querySelector<HTMLButtonElement>("button.sw-insertion-affordance");
+      expect(btn2?.style.left).toBe("300px");
+      expect(btn2?.style.top).toBe("400px");
+    });
+
     it("invokes the adapter focusNode callback after insertion", async () => {
       const anchor: RendererEdgeAnchor = {
         edgeId: INITIAL_EDGE_ID,
@@ -631,6 +685,99 @@ describe("InsertionUI", () => {
       const call = adapter.focusNode.mock.calls[0][0];
       expect(call).toHaveProperty("nodeId");
       expect(typeof call.nodeId).toBe("string");
+    });
+  });
+
+  describe("no-fallback contract regressions", () => {
+    it("never renders an affordance button without a renderer adapter", () => {
+      const graph = bootstrapWorkflowGraph();
+      const counter = new RevisionCounter();
+      const eventTarget = new EventTarget();
+      const bridge = new EventBridge(eventTarget, "0.0.0");
+      const container = document.createElement("div");
+      const ui = new InsertionUI({
+        container,
+        bridge,
+        graph,
+        counter,
+        serializeGraph: makeSerializer(),
+        // No rendererAdapter provided.
+      });
+
+      // Attempt to attach to every edge in the graph.
+      for (const edge of graph.edges) {
+        const el = document.createElement("div");
+        ui.attachToEdge(edge.id, el);
+        expect(el.querySelector("button.sw-insertion-affordance")).toBeNull();
+      }
+    });
+
+    it("never renders an affordance button when getEdgeAnchor returns null for all edges", () => {
+      const adapter = makeMockRendererAdapter(null);
+      const { ui, graph } = makeHarnessWithAdapter(adapter);
+
+      for (const edge of graph.edges) {
+        const el = document.createElement("div");
+        ui.attachToEdge(edge.id, el);
+        expect(el.querySelector("button.sw-insertion-affordance")).toBeNull();
+      }
+
+      // Adapter was queried for each edge.
+      expect(adapter.getEdgeAnchor).toHaveBeenCalledTimes(graph.edges.length);
+    });
+
+    it("does not fall back to container-relative or viewport-based positioning", () => {
+      const adapter = makeMockRendererAdapter({
+        edgeId: INITIAL_EDGE_ID,
+        sourceNodeId: "s",
+        targetNodeId: "t",
+        x: 42,
+        y: 84,
+      });
+      const { ui, container } = makeHarnessWithAdapter(adapter);
+
+      const el = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, el);
+
+      const button = el.querySelector<HTMLButtonElement>("button.sw-insertion-affordance");
+      expect(button).not.toBeNull();
+
+      // Position must come exclusively from the adapter anchor — no container-relative fallback.
+      expect(button?.style.left).toBe("42px");
+      expect(button?.style.top).toBe("84px");
+      expect(button?.style.position).toBe("absolute");
+
+      // Container should not have any positioned insert controls (no fallback rendering there).
+      expect(container.querySelector("button.sw-insertion-affordance")).toBeNull();
+    });
+
+    it("affordance visibility is entirely determined by anchor availability", () => {
+      let anchorAvailable = true;
+      const adapter = makeMockRendererAdapter(null);
+      adapter.getEdgeAnchor.mockImplementation((edgeId: string) =>
+        anchorAvailable
+          ? { edgeId, sourceNodeId: "s", targetNodeId: "t", x: 50, y: 60 }
+          : null,
+      );
+
+      const { ui } = makeHarnessWithAdapter(adapter);
+
+      // Anchor available → control shown.
+      const el1 = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, el1);
+      expect(el1.querySelector("button.sw-insertion-affordance")).not.toBeNull();
+
+      // Anchor unavailable → control hidden.
+      anchorAvailable = false;
+      const el2 = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, el2);
+      expect(el2.querySelector("button.sw-insertion-affordance")).toBeNull();
+
+      // Anchor available again → control shown again.
+      anchorAvailable = true;
+      const el3 = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, el3);
+      expect(el3.querySelector("button.sw-insertion-affordance")).not.toBeNull();
     });
   });
 });
