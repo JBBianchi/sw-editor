@@ -400,14 +400,6 @@ export class ReteLitAdapter implements RendererAdapter {
    */
   private cachedLayout: LayoutSnapshot = { nodes: [], edges: [] };
 
-  /**
-   * Whether cached insertion anchors need recomputation.
-   *
-   * Set to `true` on viewport change; cleared when {@link getInsertionAnchors}
-   * recomputes the layout.
-   */
-  private anchorsDirty = false;
-
   /** The currently registered viewport-change callback, if any. */
   private viewportChangeCallback: (() => void) | undefined;
 
