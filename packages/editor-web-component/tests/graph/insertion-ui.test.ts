@@ -25,8 +25,29 @@ function makeSerializer(): SerializeGraphCallback {
   return (_graph) => ({ format: "json", content: "{}" });
 }
 
-/** Creates a standard test harness. */
+/**
+ * Creates a mock renderer adapter that returns a valid anchor for any edge.
+ * This satisfies the requirement that insert controls only appear with valid anchors.
+ */
+function makeWildcardAdapter(): Pick<RendererAdapter, "getEdgeAnchor" | "focusNode"> & {
+  getEdgeAnchor: ReturnType<typeof vi.fn>;
+  focusNode: ReturnType<typeof vi.fn>;
+} {
+  return {
+    getEdgeAnchor: vi.fn((edgeId: string) => ({
+      edgeId,
+      sourceNodeId: "s",
+      targetNodeId: "t",
+      x: 100,
+      y: 200,
+    })),
+    focusNode: vi.fn(),
+  };
+}
+
+/** Creates a standard test harness with a renderer adapter that returns valid anchors. */
 function makeHarness(focusNode?: FocusNodeCallback) {
+  const adapter = makeWildcardAdapter();
   const graph = bootstrapWorkflowGraph();
   const counter = new RevisionCounter();
   const eventTarget = new EventTarget();
@@ -39,8 +60,9 @@ function makeHarness(focusNode?: FocusNodeCallback) {
     counter,
     serializeGraph: makeSerializer(),
     focusNode,
+    rendererAdapter: adapter as RendererAdapter,
   });
-  return { graph, counter, eventTarget, bridge, container, ui };
+  return { graph, counter, eventTarget, bridge, container, ui, adapter };
 }
 
 /**
@@ -550,7 +572,28 @@ describe("InsertionUI", () => {
       expect(button?.style.top).toBe("250px");
     });
 
-    it("uses fallback positioning when getEdgeAnchor returns null", () => {
+    it("does not show the affordance button when no renderer adapter is provided", () => {
+      const graph = bootstrapWorkflowGraph();
+      const counter = new RevisionCounter();
+      const eventTarget = new EventTarget();
+      const bridge = new EventBridge(eventTarget, "0.0.0");
+      const container = document.createElement("div");
+      const ui = new InsertionUI({
+        container,
+        bridge,
+        graph,
+        counter,
+        serializeGraph: makeSerializer(),
+      });
+
+      const el = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, el);
+
+      const button = el.querySelector<HTMLButtonElement>("button.sw-insertion-affordance");
+      expect(button).toBeNull();
+    });
+
+    it("does not show the affordance button when getEdgeAnchor returns null", () => {
       const adapter = makeMockRendererAdapter(null);
       const { ui } = makeHarnessWithAdapter(adapter);
 
@@ -558,13 +601,9 @@ describe("InsertionUI", () => {
       ui.attachToEdge(INITIAL_EDGE_ID, el);
 
       const button = el.querySelector<HTMLButtonElement>("button.sw-insertion-affordance");
-      expect(button).not.toBeNull();
-
-      // When no anchor is available, the button should not have explicit
-      // coordinate-based positioning (falling back to CSS/layout defaults).
+      // When no anchor is available, the insert control must not be shown.
+      expect(button).toBeNull();
       expect(adapter.getEdgeAnchor).toHaveBeenCalledWith(INITIAL_EDGE_ID);
-      expect(button?.style.left).toBe("");
-      expect(button?.style.top).toBe("");
     });
 
     it("invokes the adapter focusNode callback after insertion", async () => {
