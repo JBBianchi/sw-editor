@@ -314,6 +314,11 @@ class SwEditorElement extends HTMLElement {
    * @param edgeId - The edge at which the new task will be inserted.
    */
   #openMenu(edgeId: string): void {
+    // Remember the invoking affordance so focus can be restored on Escape.
+    const invoker = this.querySelector<HTMLButtonElement>(
+      `.sw-insertion-affordance[data-edge-id="${edgeId}"]`,
+    );
+
     // Close any existing menu before opening a new one.
     for (const el of Array.from(this.querySelectorAll(".sw-task-menu"))) {
       el.remove();
@@ -370,6 +375,7 @@ class SwEditorElement extends HTMLElement {
           case "Escape":
             e.preventDefault();
             menu.remove();
+            invoker?.focus();
             break;
         }
       });
