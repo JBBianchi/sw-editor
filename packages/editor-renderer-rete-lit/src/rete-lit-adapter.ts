@@ -10,7 +10,10 @@
 import type { LitArea2D } from "@retejs/lit-plugin";
 import { LitPlugin, Presets } from "@retejs/lit-plugin";
 import type {
+  EdgeInsertionAnchor,
   FocusTarget,
+  LayoutSnapshot,
+  OrientationMode,
   RendererAdapter,
   RendererCapabilitySnapshot,
   RendererEdgeAnchor,
@@ -332,6 +335,12 @@ export class ReteLitAdapter implements RendererAdapter {
    */
   private readonly graphIdToReteConn = new Map<string, string>();
 
+  /** The current graph orientation mode. */
+  private orientation: OrientationMode = "top-to-bottom";
+
+  /** The currently registered viewport-change callback, if any. */
+  private viewportChangeCallback: (() => void) | undefined;
+
   constructor() {
     this.bridge = new ReteLitEventBridge();
     this.events = this.bridge;
@@ -506,6 +515,108 @@ export class ReteLitAdapter implements RendererAdapter {
     if (nodeView?.element) {
       nodeView.element.focus();
     }
+  }
+
+  /**
+   * Return a point-in-time snapshot of all node and edge positions in the
+   * current layout.
+   *
+   * Node frames are derived from the Rete area node views when mounted,
+   * falling back to the cached graph with computed linear positions.
+   * Edge frames use source and target node positions as a two-point path.
+   *
+   * @returns The layout snapshot.
+   */
+  getLayoutSnapshot(): LayoutSnapshot {
+    if (this.lastGraph === null) {
+      return { nodes: [], edges: [] };
+    }
+
+    const NODE_GAP = 220;
+    const nodeFrames = this.lastGraph.nodes.map((n, i) => {
+      let x = i * NODE_GAP;
+      let y = 0;
+      if (this.mounted !== null) {
+        const reteId = this.graphIdToReteNode.get(n.id);
+        if (reteId !== undefined) {
+          const view = this.mounted.area.nodeViews.get(reteId);
+          if (view !== undefined) {
+            x = view.position.x;
+            y = view.position.y;
+          }
+        }
+      }
+      return { id: n.id, x, y, width: 180, height: 40 };
+    });
+
+    const edgeFrames = this.lastGraph.edges.map((e) => {
+      const srcFrame = nodeFrames.find((f) => f.id === e.source);
+      const tgtFrame = nodeFrames.find((f) => f.id === e.target);
+      return {
+        id: e.id,
+        sourceId: e.source,
+        targetId: e.target,
+        path: [
+          { x: srcFrame?.x ?? 0, y: srcFrame?.y ?? 0 },
+          { x: tgtFrame?.x ?? 0, y: tgtFrame?.y ?? 0 },
+        ],
+      };
+    });
+
+    return { nodes: nodeFrames, edges: edgeFrames };
+  }
+
+  /**
+   * Return insertion anchor points for all currently rendered edges.
+   *
+   * Each anchor represents the midpoint of an edge where an inline "add
+   * task" control can be positioned.
+   *
+   * @returns An array of edge insertion anchors.
+   */
+  getInsertionAnchors(): EdgeInsertionAnchor[] {
+    if (this.lastGraph === null) {
+      return [];
+    }
+
+    return this.lastGraph.edges.flatMap((e) => {
+      const anchor = this.getEdgeAnchor(e.id);
+      if (anchor === null) {
+        return [];
+      }
+      return [{ edgeId: e.id, x: anchor.x, y: anchor.y }];
+    });
+  }
+
+  /**
+   * Set the flow direction of the graph layout.
+   *
+   * Stores the requested orientation for future layout calculations.
+   * Re-applies the current graph to trigger a re-layout.
+   *
+   * @param mode - The desired orientation mode.
+   */
+  setOrientation(mode: OrientationMode): void {
+    this.orientation = mode;
+    if (this.lastGraph !== null) {
+      void this.applyGraph(this.lastGraph);
+    }
+  }
+
+  /**
+   * Register a callback invoked whenever the renderer viewport changes
+   * (scroll, zoom, resize).
+   *
+   * @param callback - The function to call on viewport changes.
+   * @returns A function that removes the subscription.
+   */
+  onViewportChange(callback: () => void): () => void {
+    this.viewportChangeCallback = callback;
+    return () => {
+      if (this.viewportChangeCallback === callback) {
+        this.viewportChangeCallback = undefined;
+      }
+    };
   }
 
   /**

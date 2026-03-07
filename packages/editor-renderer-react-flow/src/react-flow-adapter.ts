@@ -13,7 +13,10 @@
 import "@xyflow/react/dist/style.css";
 
 import type {
+  EdgeInsertionAnchor,
   FocusTarget,
+  LayoutSnapshot,
+  OrientationMode,
   RendererAdapter,
   RendererCapabilitySnapshot,
   RendererEdgeAnchor,
@@ -436,6 +439,12 @@ export class ReactFlowAdapter implements RendererAdapter {
    */
   private layoutPositions: Map<string, { x: number; y: number }> = new Map();
 
+  /** The current graph orientation mode. */
+  private orientation: OrientationMode = "top-to-bottom";
+
+  /** The currently registered viewport-change callback, if any. */
+  private viewportChangeCallback: (() => void) | undefined;
+
   /**
    * Attach the React Flow renderer to `container` and render the initial graph.
    *
@@ -562,6 +571,111 @@ export class ReactFlowAdapter implements RendererAdapter {
     }
 
     this.controller.setCenter(pos.x, pos.y, { duration: 200 });
+  }
+
+  /**
+   * Return a point-in-time snapshot of all node and edge positions in the
+   * current layout.
+   *
+   * Node frames are derived from the cached layout positions computed during
+   * the most recent {@link mount} or {@link update} call. Edge frames use
+   * the source and target node positions as a two-point path.
+   *
+   * @returns The layout snapshot.
+   */
+  getLayoutSnapshot(): LayoutSnapshot {
+    if (this.lastGraph === null) {
+      return { nodes: [], edges: [] };
+    }
+
+    const nodeFrames = this.lastGraph.nodes.map((n) => {
+      const pos = this.layoutPositions.get(n.id) ?? { x: 0, y: 0 };
+      return { id: n.id, x: pos.x, y: pos.y, width: 150, height: 40 };
+    });
+
+    const edgeFrames = this.lastGraph.edges.map((e) => {
+      const srcPos = this.layoutPositions.get(e.source) ?? { x: 0, y: 0 };
+      const tgtPos = this.layoutPositions.get(e.target) ?? { x: 0, y: 0 };
+      return {
+        id: e.id,
+        sourceId: e.source,
+        targetId: e.target,
+        path: [
+          { x: srcPos.x, y: srcPos.y },
+          { x: tgtPos.x, y: tgtPos.y },
+        ],
+      };
+    });
+
+    return { nodes: nodeFrames, edges: edgeFrames };
+  }
+
+  /**
+   * Return insertion anchor points for all currently rendered edges.
+   *
+   * Each anchor represents the midpoint of an edge where an inline "add
+   * task" control can be positioned. Midpoints are computed from cached
+   * layout positions.
+   *
+   * @returns An array of edge insertion anchors.
+   */
+  getInsertionAnchors(): EdgeInsertionAnchor[] {
+    if (this.lastGraph === null) {
+      return [];
+    }
+
+    return this.lastGraph.edges.flatMap((e) => {
+      const srcPos = this.layoutPositions.get(e.source);
+      const tgtPos = this.layoutPositions.get(e.target);
+      if (srcPos === undefined || tgtPos === undefined) {
+        return [];
+      }
+      return [
+        {
+          edgeId: e.id,
+          x: (srcPos.x + tgtPos.x) / 2,
+          y: (srcPos.y + tgtPos.y) / 2,
+        },
+      ];
+    });
+  }
+
+  /**
+   * Set the flow direction of the graph layout.
+   *
+   * Stores the requested orientation for future layout calculations.
+   * Currently the adapter uses a simple linear layout; full orientation
+   * support will be implemented when the layout engine is expanded.
+   *
+   * @param mode - The desired orientation mode.
+   */
+  setOrientation(mode: OrientationMode): void {
+    this.orientation = mode;
+    if (this.lastGraph !== null) {
+      const { nodes, edges, positions } = toRFGraph(this.lastGraph);
+      this.layoutPositions = positions;
+      this.controller?.updateGraph(nodes, edges);
+    }
+  }
+
+  /**
+   * Register a callback invoked whenever the renderer viewport changes
+   * (scroll, zoom, resize).
+   *
+   * The current implementation returns a no-op unsubscribe function.
+   * Full viewport change tracking will be added when React Flow's
+   * `onViewportChange` callback is wired through the component tree.
+   *
+   * @param callback - The function to call on viewport changes.
+   * @returns A function that removes the subscription.
+   */
+  onViewportChange(callback: () => void): () => void {
+    this.viewportChangeCallback = callback;
+    return () => {
+      if (this.viewportChangeCallback === callback) {
+        this.viewportChangeCallback = undefined;
+      }
+    };
   }
 
   /**
