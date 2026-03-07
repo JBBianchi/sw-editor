@@ -216,22 +216,30 @@ export async function panAndZoom(
  * Wait until insertion anchor positions have settled after a viewport or
  * graph change.
  *
- * The function polls the bounding-box positions of all visible insertion
- * affordance buttons twice with a short interval. If positions match between
- * polls (within 1 px), anchors are considered stable. Falls back to a fixed
- * timeout if no affordance buttons are present.
+ * When no affordance buttons are present yet (e.g. immediately after an
+ * orientation switch that destroys and rebuilds the DOM), the function waits
+ * for at least one button to appear before starting the position-polling
+ * loop. This eliminates transient timing flakes caused by assertions
+ * running before the renderer has re-created its edge affordances.
  *
  * @param page - The Playwright {@link Page} instance.
  */
 export async function waitForAnchorStabilization(page: Page): Promise<void> {
   const buttons = page.locator(INSERT_BUTTON_SELECTOR);
-  const count = await buttons.count();
 
+  // If no affordances exist yet, wait for at least one to appear (up to 5 s).
+  // This handles the gap between orientation-triggered DOM teardown and the
+  // renderer rebuilding affordance buttons.
+  let count = await buttons.count();
   if (count === 0) {
-    // No affordances to stabilize; wait a short fixed period for renderer
-    // layout to complete.
-    await page.waitForTimeout(150);
-    return;
+    try {
+      await buttons.first().waitFor({ state: "attached", timeout: 5_000 });
+    } catch {
+      // Affordances never appeared — fall back to a short fixed wait so the
+      // caller can proceed (e.g. empty graphs with no edges).
+      await page.waitForTimeout(200);
+      return;
+    }
   }
 
   // Snapshot current positions.
@@ -247,14 +255,15 @@ export async function waitForAnchorStabilization(page: Page): Promise<void> {
     return positions;
   };
 
-  // Poll up to 10 times with 50 ms intervals (~500 ms max).
+  // Poll up to 15 times with 50 ms intervals (~750 ms max).
   let previous = await snapshot();
-  const maxAttempts = 10;
+  const maxAttempts = 15;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await page.waitForTimeout(50);
     const current = await snapshot();
 
     if (
+      current.length > 0 &&
       current.length === previous.length &&
       current.every(
         (pt, i) => Math.abs(pt.x - previous[i].x) <= 1 && Math.abs(pt.y - previous[i].y) <= 1,
