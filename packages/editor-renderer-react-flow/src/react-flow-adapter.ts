@@ -128,6 +128,10 @@ interface WorkflowFlowAppProps {
    * @param controller - The imperative controller for this component instance.
    */
   onController: (controller: FlowController) => void;
+  /**
+   * Callback invoked whenever the React Flow viewport changes (pan, zoom).
+   */
+  onViewportChange: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -298,6 +302,7 @@ function WorkflowFlowInner(props: WorkflowFlowAppProps): React.ReactElement {
     edges,
     nodeTypes,
     onSelectionChange: props.onSelectionChange,
+    onViewportChange: props.onViewportChange,
     fitView: true,
     proOptions: { hideAttribution: false },
   });
@@ -469,6 +474,14 @@ export class ReactFlowAdapter implements RendererAdapter {
   private viewportChangeCallback: (() => void) | undefined;
 
   /**
+   * Whether cached insertion anchors need recomputation.
+   *
+   * Set to `true` on viewport change; cleared when {@link getInsertionAnchors}
+   * recomputes the layout.
+   */
+  private anchorsDirty = false;
+
+  /**
    * Attach the React Flow renderer to `container` and render the initial graph.
    *
    * Creates a React DOM root and mounts the internal {@link WorkflowFlowApp}
@@ -504,6 +517,10 @@ export class ReactFlowAdapter implements RendererAdapter {
         onController: (controller: FlowController) => {
           this.controller = controller;
         },
+        onViewportChange: () => {
+          this.anchorsDirty = true;
+          this.viewportChangeCallback?.();
+        },
       }),
     );
   }
@@ -531,6 +548,7 @@ export class ReactFlowAdapter implements RendererAdapter {
     this.lastGraph = graph;
     const { nodes, edges, layout } = toRFGraph(graph, this.orientation);
     this.cachedLayout = layout;
+    this.anchorsDirty = false;
     this.controller.updateGraph(nodes, edges);
   }
 
@@ -620,6 +638,12 @@ export class ReactFlowAdapter implements RendererAdapter {
    * @returns An array of edge insertion anchors.
    */
   getInsertionAnchors(): EdgeInsertionAnchor[] {
+    if (this.anchorsDirty && this.lastGraph !== null) {
+      const { layout } = toRFGraph(this.lastGraph, this.orientation);
+      this.cachedLayout = layout;
+      this.anchorsDirty = false;
+    }
+
     return this.cachedLayout.edges.flatMap((edgeFrame) => {
       if (edgeFrame.path.length < 2) {
         return [];
@@ -649,14 +673,14 @@ export class ReactFlowAdapter implements RendererAdapter {
 
   /**
    * Register a callback invoked whenever the renderer viewport changes
-   * (scroll, zoom, resize).
+   * (pan, zoom).
    *
-   * The current implementation returns a no-op unsubscribe function.
-   * Full viewport change tracking will be added when React Flow's
-   * `onViewportChange` callback is wired through the component tree.
+   * On each viewport change the cached insertion anchors are invalidated
+   * so that the next {@link getInsertionAnchors} call recomputes them from
+   * the current layout.
    *
    * @param callback - The function to call on viewport changes.
-   * @returns A function that removes the subscription.
+   * @returns A function that, when called, removes the subscription.
    */
   onViewportChange(callback: () => void): () => void {
     this.viewportChangeCallback = callback;
@@ -680,6 +704,7 @@ export class ReactFlowAdapter implements RendererAdapter {
     }
     this.disposed = true;
     this.events.offSelectionChange();
+    this.viewportChangeCallback = undefined;
     this.controller = null;
     this.lastGraph = null;
     this.cachedLayout = { nodes: [], edges: [] };
