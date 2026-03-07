@@ -2,7 +2,7 @@
 
 **Feature Branch**: `007-tight-insert-geometry`  
 **Created**: 2026-03-07  
-**Status**: Draft  
+**Status**: Complete  
 **Input**: User description: "Define strict, testable visual contracts for insertion affordance placement and layout orientation: the plus button must be centered on its target edge, remain aligned during pan/zoom, and graph layout must support deterministic orientation-aware port placement (top-bottom vs left-right) with measurable acceptance tolerances."
 
 ## User Scenarios & Testing *(mandatory)*
