@@ -1,5 +1,11 @@
 export type {
+  EdgeInsertionAnchor,
   FocusTarget,
+  LayoutEdgeFrame,
+  LayoutNodeFrame,
+  LayoutSnapshot,
+  OrientationMode,
+  Point,
   RendererAdapter,
   RendererCapabilitySnapshot,
   RendererClearSelection,

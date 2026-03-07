@@ -185,6 +185,82 @@ export interface FocusTarget {
 }
 
 // ---------------------------------------------------------------------------
+// Geometry: orientation, layout snapshot, and insertion anchors
+// ---------------------------------------------------------------------------
+
+/**
+ * A 2-D point in renderer coordinate space.
+ */
+export interface Point {
+  /** Horizontal coordinate (pixels). */
+  x: number;
+  /** Vertical coordinate (pixels). */
+  y: number;
+}
+
+/**
+ * Flow direction of the graph layout.
+ *
+ * - `'top-to-bottom'` — root nodes at the top, leaves at the bottom.
+ * - `'left-to-right'` — root nodes on the left, leaves on the right.
+ */
+export type OrientationMode = "top-to-bottom" | "left-to-right";
+
+/**
+ * Axis-aligned bounding frame of a single node in the current layout.
+ */
+export interface LayoutNodeFrame {
+  /** Node identity. */
+  id: string;
+  /** Left edge of the node bounding box (pixels). */
+  x: number;
+  /** Top edge of the node bounding box (pixels). */
+  y: number;
+  /** Width of the node bounding box (pixels). */
+  width: number;
+  /** Height of the node bounding box (pixels). */
+  height: number;
+}
+
+/**
+ * Routing frame of a single edge in the current layout.
+ */
+export interface LayoutEdgeFrame {
+  /** Edge identity. */
+  id: string;
+  /** Identity of the source node. */
+  sourceId: string;
+  /** Identity of the target node. */
+  targetId: string;
+  /** Ordered waypoints that define the edge path. */
+  path: Point[];
+}
+
+/**
+ * A point-in-time snapshot of all node and edge positions produced by the
+ * renderer's layout engine.
+ */
+export interface LayoutSnapshot {
+  /** Bounding frames of all currently laid-out nodes. */
+  nodes: LayoutNodeFrame[];
+  /** Routing frames of all currently laid-out edges. */
+  edges: LayoutEdgeFrame[];
+}
+
+/**
+ * An insertion anchor positioned on a rendered edge, used to show an
+ * inline "add task" control at the edge midpoint.
+ */
+export interface EdgeInsertionAnchor {
+  /** Identity of the edge this anchor belongs to. */
+  edgeId: string;
+  /** Horizontal coordinate of the anchor point (pixels). */
+  x: number;
+  /** Vertical coordinate of the anchor point (pixels). */
+  y: number;
+}
+
+// ---------------------------------------------------------------------------
 // Adapter interface
 // ---------------------------------------------------------------------------
 
@@ -279,4 +355,40 @@ export interface RendererAdapter {
    * @param target - Describes which node to focus and the desired behavior.
    */
   focusNode?(target: FocusTarget): void;
+
+  /**
+   * Return a point-in-time snapshot of all node and edge positions in the
+   * current layout.
+   *
+   * @returns The layout snapshot.
+   */
+  getLayoutSnapshot(): LayoutSnapshot;
+
+  /**
+   * Return insertion anchor points for all currently rendered edges.
+   *
+   * Each anchor represents the midpoint of an edge where an inline "add
+   * task" control can be positioned.
+   *
+   * @returns An array of edge insertion anchors.
+   */
+  getInsertionAnchors(): EdgeInsertionAnchor[];
+
+  /**
+   * Set the flow direction of the graph layout.
+   *
+   * The renderer must re-layout the graph when the orientation changes.
+   *
+   * @param mode - The desired orientation mode.
+   */
+  setOrientation(mode: OrientationMode): void;
+
+  /**
+   * Register a callback invoked whenever the renderer viewport changes
+   * (scroll, zoom, resize).
+   *
+   * @param callback - The function to call on viewport changes.
+   * @returns A function that, when called, removes the subscription.
+   */
+  onViewportChange(callback: () => void): () => void;
 }
