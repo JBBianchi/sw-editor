@@ -2,10 +2,13 @@
  * Performance benchmarks for task insertion and anchor realignment.
  *
  * Measures:
- * 1. Insert-to-settled-layout time for a workflow with 25 nodes and 30 edges.
- *    Asserts that the 95th percentile latency is ≤ 250 ms.
- * 2. Anchor realignment time after a simulated pan/zoom viewport transform.
+ * 1. Layout recompute after graph mutation for a dense graph (25 nodes, 30 edges).
+ *    Asserts that the 95th percentile latency is ≤ 150 ms.
+ * 2. Anchor realignment after viewport change (pan/zoom).
  *    Asserts that the 95th percentile latency is ≤ 100 ms.
+ *
+ * Uses the dense fixture from T001 ({@link insert-geometry-dense.json}) as the
+ * starting point, extended to 25 task nodes and 30 edges for worst-case benchmarks.
  *
  * Multiple iterations are run per benchmark for statistical significance.
  *
@@ -13,16 +16,16 @@
  */
 
 import {
-  bootstrapWorkflowGraph,
   END_NODE_ID,
   type GraphEdge,
-  INITIAL_EDGE_ID,
   insertTask,
   RevisionCounter,
   type WorkflowGraph,
 } from "@sw-editor/editor-core";
 import type { RendererEdgeAnchor } from "@sw-editor/editor-renderer-contract";
 import { beforeAll, describe, expect, it } from "vitest";
+
+import { loadFixtureGraph } from "./insertion-layout.helpers.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -34,8 +37,8 @@ import { beforeAll, describe, expect, it } from "vitest";
  */
 const ITERATIONS = 30;
 
-/** Maximum allowed 95th percentile for insert-to-settled-layout (ms). */
-const INSERT_P95_THRESHOLD_MS = 250;
+/** Maximum allowed 95th percentile for layout recompute after graph mutation (ms). */
+const LAYOUT_RECOMPUTE_P95_THRESHOLD_MS = 150;
 
 /** Maximum allowed 95th percentile for anchor realignment (ms). */
 const ANCHOR_P95_THRESHOLD_MS = 100;
@@ -92,55 +95,61 @@ function logReport(label: string, sorted: number[]): void {
 // ---------------------------------------------------------------------------
 
 /**
- * Builds a linear workflow graph with 25 task nodes and 26 edges by
- * sequentially inserting tasks, then adds 4 cross-edges to reach
- * 25 task nodes + 2 boundary nodes = 27 nodes total, 30 edges total.
+ * Builds a dense benchmark graph starting from the T001 dense fixture
+ * ({@link insert-geometry-dense.json}) and extending it by inserting
+ * additional task nodes until the graph reaches at least
+ * {@link TARGET_NODE_COUNT} task nodes (+ start + end) and
+ * {@link TARGET_EDGE_COUNT} edges.
  *
- * The resulting graph satisfies the benchmark requirement of
- * 25 (task) nodes and 30 edges.
+ * Cross-edges are appended to fill any remaining edge gap after the
+ * linear insertions, ensuring the graph represents a realistic
+ * worst-case benchmark topology.
  *
- * @returns A workflow graph with 27 nodes (25 task + start + end) and 30 edges.
+ * @returns A workflow graph with ≥ 25 task nodes and ≥ 30 edges.
  */
-function buildLargeGraph(): WorkflowGraph {
+function buildDenseBenchmarkGraph(): WorkflowGraph {
+  let graph = loadFixtureGraph("insert-geometry-dense.json");
+
   const counter = new RevisionCounter();
-  let graph = bootstrapWorkflowGraph();
 
-  // Build a linear chain of 25 task nodes.
-  const taskNodeIds: string[] = [];
+  // Count current task nodes (everything except __start__ and __end__).
+  const taskNodeIds: string[] = graph.nodes
+    .filter((n) => n.id !== "__start__" && n.id !== "__end__")
+    .map((n) => n.id);
 
-  // First insertion on the initial edge.
-  const first = insertTask(graph, counter, {
-    edgeId: INITIAL_EDGE_ID,
-    taskReference: "task-0",
-  });
-  graph = first.graph;
-  taskNodeIds.push(first.nodeId);
-
-  // Insert remaining 24 task nodes at the tail (before __end__).
-  for (let i = 1; i < TARGET_NODE_COUNT; i++) {
+  // Insert additional tasks at the tail edge (before __end__) until we
+  // reach the target task node count.
+  while (taskNodeIds.length < TARGET_NODE_COUNT) {
     const edgeToEnd = graph.edges.find((e) => e.target === END_NODE_ID);
-    if (!edgeToEnd) throw new Error(`No edge to END found at iteration ${i}`);
+    if (!edgeToEnd) throw new Error("No edge to __end__ found during graph extension");
     const result = insertTask(graph, counter, {
       edgeId: edgeToEnd.id,
-      taskReference: `task-${i}`,
+      taskReference: `perf-pad-${taskNodeIds.length}`,
     });
     graph = result.graph;
     taskNodeIds.push(result.nodeId);
   }
 
-  // At this point: 27 nodes (start + 25 tasks + end), 26 edges.
-  // Add 4 cross-edges to reach 30 edges total.
-  const crossEdges: GraphEdge[] = [
-    { id: "cross-0", source: taskNodeIds[0], target: taskNodeIds[4] },
-    { id: "cross-1", source: taskNodeIds[5], target: taskNodeIds[10] },
-    { id: "cross-2", source: taskNodeIds[10], target: taskNodeIds[15] },
-    { id: "cross-3", source: taskNodeIds[15], target: taskNodeIds[24] },
-  ];
+  // Add cross-edges to reach the target edge count.
+  const crossEdges: GraphEdge[] = [];
+  let crossIdx = 0;
+  while (
+    graph.edges.length + crossEdges.length < TARGET_EDGE_COUNT &&
+    crossIdx < taskNodeIds.length - 4
+  ) {
+    crossEdges.push({
+      id: `cross-${crossIdx}`,
+      source: taskNodeIds[crossIdx],
+      target: taskNodeIds[crossIdx + 4],
+    });
+    crossIdx++;
+  }
 
-  return {
-    nodes: graph.nodes,
-    edges: [...graph.edges, ...crossEdges],
-  };
+  if (crossEdges.length > 0) {
+    graph = { nodes: graph.nodes, edges: [...graph.edges, ...crossEdges] };
+  }
+
+  return graph;
 }
 
 /**
@@ -196,12 +205,13 @@ function realignAnchorsAfterViewportTransform(
 }
 
 // ---------------------------------------------------------------------------
-// Insert-to-settled-layout benchmark
+// Layout recompute after graph mutation benchmark
 // ---------------------------------------------------------------------------
 
 /**
- * Measures the time to insert a new task node into a large graph and
- * recompute all edge anchor positions (simulating settled layout).
+ * Measures the time to insert a new task node into the dense benchmark
+ * graph and recompute all edge anchor positions (simulating a full layout
+ * recompute after graph mutation).
  *
  * @param graph - The base graph to insert into.
  * @returns Elapsed time in milliseconds.
@@ -257,19 +267,19 @@ function measureAnchorRealignment(anchors: RendererEdgeAnchor[]): number {
 
 describe("Insertion performance benchmarks", () => {
   // -----------------------------------------------------------------------
-  // Insert-to-settled-layout (25 nodes / 30 edges)
+  // Layout recompute after graph mutation (25 nodes / 30 edges)
   // -----------------------------------------------------------------------
 
-  describe("insert-to-settled-layout (25 nodes / 30 edges)", () => {
+  describe("layout recompute after graph mutation (25 nodes / 30 edges)", () => {
     let baseGraph: WorkflowGraph;
     let sortedLatencies: number[];
 
     beforeAll(() => {
-      baseGraph = buildLargeGraph();
+      baseGraph = buildDenseBenchmarkGraph();
 
-      // Validate the graph meets the size requirements.
-      expect(baseGraph.nodes).toHaveLength(TARGET_NODE_COUNT + 2); // +start+end
-      expect(baseGraph.edges).toHaveLength(TARGET_EDGE_COUNT);
+      // Validate the graph meets the minimum size requirements.
+      expect(baseGraph.nodes.length).toBeGreaterThanOrEqual(TARGET_NODE_COUNT + 2); // +start+end
+      expect(baseGraph.edges.length).toBeGreaterThanOrEqual(TARGET_EDGE_COUNT);
 
       const latencies: number[] = [];
       for (let i = 0; i < ITERATIONS; i++) {
@@ -277,7 +287,7 @@ describe("Insertion performance benchmarks", () => {
       }
 
       sortedLatencies = latencies.slice().sort((a, b) => a - b);
-      logReport("insert-to-settled-layout", sortedLatencies);
+      logReport("layout-recompute-after-mutation", sortedLatencies);
     });
 
     it(`collects ${ITERATIONS} latency samples`, () => {
@@ -291,12 +301,12 @@ describe("Insertion performance benchmarks", () => {
       }
     });
 
-    it(`p95 latency ≤ ${INSERT_P95_THRESHOLD_MS} ms`, () => {
+    it(`p95 latency ≤ ${LAYOUT_RECOMPUTE_P95_THRESHOLD_MS} ms`, () => {
       const p95 = percentile(sortedLatencies, 0.95);
       expect(
         p95,
-        `Insert-to-settled p95 ${p95.toFixed(3)} ms exceeds ${INSERT_P95_THRESHOLD_MS} ms threshold`,
-      ).toBeLessThanOrEqual(INSERT_P95_THRESHOLD_MS);
+        `Layout recompute p95 ${p95.toFixed(3)} ms exceeds ${LAYOUT_RECOMPUTE_P95_THRESHOLD_MS} ms threshold`,
+      ).toBeLessThanOrEqual(LAYOUT_RECOMPUTE_P95_THRESHOLD_MS);
     });
 
     it("p50 latency is a finite non-negative number", () => {
@@ -321,10 +331,10 @@ describe("Insertion performance benchmarks", () => {
     let sortedLatencies: number[];
 
     beforeAll(() => {
-      const graph = buildLargeGraph();
+      const graph = buildDenseBenchmarkGraph();
       baseAnchors = computeEdgeAnchors(graph);
 
-      expect(baseAnchors).toHaveLength(TARGET_EDGE_COUNT);
+      expect(baseAnchors.length).toBeGreaterThanOrEqual(TARGET_EDGE_COUNT);
 
       const latencies: number[] = [];
       for (let i = 0; i < ITERATIONS; i++) {
