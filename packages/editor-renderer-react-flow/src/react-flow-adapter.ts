@@ -17,6 +17,7 @@ import type {
   FocusTarget,
   LayoutSnapshot,
   OrientationMode,
+  Point,
   RendererAdapter,
   RendererCapabilitySnapshot,
   RendererEdgeAnchor,
@@ -27,6 +28,7 @@ import type {
   RendererSelectionHandler,
   WorkflowGraph,
 } from "@sw-editor/editor-renderer-contract";
+import { computeDeterministicLayout } from "@sw-editor/editor-renderer-contract";
 import {
   type Edge,
   type Node,
@@ -132,46 +134,51 @@ interface WorkflowFlowAppProps {
 // Graph conversion helpers
 // ---------------------------------------------------------------------------
 
-/** Horizontal gap between nodes when arranging in a simple linear layout. */
-const NODE_H_GAP = 200;
-/** Vertical position used for all nodes in the default layout. */
-const NODE_Y = 0;
-
 /**
- * Derive a simple left-to-right layout position for each node based on its
- * index in the ordered nodes array.
+ * Compute the midpoint of an edge path by walking cumulative segment lengths.
  *
- * The layout is intentionally minimal: React Flow handles interactive
- * repositioning once the graph is rendered. A more sophisticated auto-layout
- * can be layered on top in future capability expansions.
+ * Interpolates the point at exactly half the total path length, handling
+ * both straight and multi-segment (curved/routed) paths.
  *
- * @param index - Zero-based position of the node in the nodes array.
- * @returns The `{x, y}` coordinates for the node.
+ * @param path - Ordered list of points forming the edge path.
+ * @returns The point at the midpoint of the path's total length.
  */
-function nodePosition(index: number): { x: number; y: number } {
-  return { x: index * NODE_H_GAP, y: NODE_Y };
-}
-
-/**
- * Compute layout positions for all nodes in a graph, keyed by node ID.
- *
- * Produces a fresh position map every time it is called so that repeated
- * insertions always receive recalculated, non-overlapping coordinates.
- * Each node is assigned a unique horizontal slot based on its array index,
- * guaranteeing that no two nodes share the same position regardless of
- * how many insertions have occurred.
- *
- * @param graph - The workflow graph whose nodes need layout positions.
- * @returns A map from node ID to `{x, y}` coordinates.
- */
-function computeLayoutPositions(graph: WorkflowGraph): Map<string, { x: number; y: number }> {
-  const positions = new Map<string, { x: number; y: number }>();
-  for (let i = 0; i < graph.nodes.length; i++) {
-    const node = graph.nodes[i];
-    if (!node) continue;
-    positions.set(node.id, nodePosition(i));
+function pathMidpoint(path: Point[]): Point {
+  if (path.length < 2) {
+    return path[0] ?? { x: 0, y: 0 };
   }
-  return positions;
+
+  let totalLength = 0;
+  const segmentLengths: number[] = [];
+  for (let i = 1; i < path.length; i++) {
+    const prev = path[i - 1] as Point;
+    const curr = path[i] as Point;
+    const dx = curr.x - prev.x;
+    const dy = curr.y - prev.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    segmentLengths.push(len);
+    totalLength += len;
+  }
+
+  const halfLength = totalLength / 2;
+  let accumulated = 0;
+
+  for (let i = 0; i < segmentLengths.length; i++) {
+    const segLen = segmentLengths[i] as number;
+    if (accumulated + segLen >= halfLength) {
+      const from = path[i] as Point;
+      const to = path[i + 1] as Point;
+      const t = segLen === 0 ? 0 : (halfLength - accumulated) / segLen;
+      return {
+        x: from.x + t * (to.x - from.x),
+        y: from.y + t * (to.y - from.y),
+      };
+    }
+    accumulated += segLen;
+  }
+
+  // Fallback: return the last point (should not normally be reached).
+  return path[path.length - 1] as Point;
 }
 
 /**
@@ -210,27 +217,42 @@ function toRFEdge(edge: RendererGraphEdge): RFEdge {
 }
 
 /**
- * Convert a {@link WorkflowGraph} to separate React Flow nodes and edges arrays.
+ * Convert a {@link WorkflowGraph} to separate React Flow nodes and edges arrays
+ * using the deterministic dagre layout for positioning.
  *
- * Recalculates layout positions for every node on each call so that repeated
- * insertions always produce non-overlapping coordinates. The position map is
- * returned alongside the converted arrays so the caller can cache it for
- * subsequent edge-anchor queries.
+ * Recalculates layout for every node on each call so that repeated insertions
+ * always produce non-overlapping, properly routed coordinates. The full
+ * {@link LayoutSnapshot} is returned so the caller can use it for edge-path
+ * midpoint queries.
  *
  * @param graph - The workflow graph to convert.
- * @returns An object containing the converted `nodes`, `edges`, and a
- *   `positions` map keyed by node ID.
+ * @param orientation - The layout orientation mode.
+ * @returns An object containing the converted `nodes`, `edges`, and the
+ *   dagre `layout` snapshot.
  */
-function toRFGraph(graph: WorkflowGraph): {
+function toRFGraph(
+  graph: WorkflowGraph,
+  orientation: OrientationMode,
+): {
   nodes: RFNode[];
   edges: RFEdge[];
-  positions: Map<string, { x: number; y: number }>;
+  layout: LayoutSnapshot;
 } {
-  const positions = computeLayoutPositions(graph);
+  const layout = computeDeterministicLayout(
+    graph.nodes.map((n) => ({ id: n.id })),
+    graph.edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
+    { orientation },
+  );
+
+  const positionMap = new Map<string, { x: number; y: number }>();
+  for (const frame of layout.nodes) {
+    positionMap.set(frame.id, { x: frame.x, y: frame.y });
+  }
+
   return {
-    nodes: graph.nodes.map((n) => toRFNode(n, positions.get(n.id) ?? { x: 0, y: 0 })),
+    nodes: graph.nodes.map((n) => toRFNode(n, positionMap.get(n.id) ?? { x: 0, y: 0 })),
     edges: graph.edges.map((e) => toRFEdge(e)),
-    positions,
+    layout,
   };
 }
 
@@ -432,12 +454,13 @@ export class ReactFlowAdapter implements RendererAdapter {
   private lastGraph: WorkflowGraph | null = null;
 
   /**
-   * Cached layout positions keyed by node ID, computed during {@link mount} and
+   * Cached dagre layout snapshot computed during {@link mount} and
    * {@link update}. Kept in sync with {@link lastGraph} so that
-   * {@link getEdgeAnchor} returns correct midpoints immediately after an
-   * insertion without needing to wait for a React render cycle.
+   * {@link getEdgeAnchor} and {@link getInsertionAnchors} return correct
+   * midpoints immediately after an insertion without needing to wait for
+   * a React render cycle.
    */
-  private layoutPositions: Map<string, { x: number; y: number }> = new Map();
+  private cachedLayout: LayoutSnapshot = { nodes: [], edges: [] };
 
   /** The current graph orientation mode. */
   private orientation: OrientationMode = "top-to-bottom";
@@ -465,8 +488,8 @@ export class ReactFlowAdapter implements RendererAdapter {
     }
 
     this.lastGraph = graph;
-    const { nodes, edges, positions } = toRFGraph(graph);
-    this.layoutPositions = positions;
+    const { nodes, edges, layout } = toRFGraph(graph, this.orientation);
+    this.cachedLayout = layout;
     this.root = createRoot(container);
 
     const bridge = this.events;
@@ -506,8 +529,8 @@ export class ReactFlowAdapter implements RendererAdapter {
     }
 
     this.lastGraph = graph;
-    const { nodes, edges, positions } = toRFGraph(graph);
-    this.layoutPositions = positions;
+    const { nodes, edges, layout } = toRFGraph(graph, this.orientation);
+    this.cachedLayout = layout;
     this.controller.updateGraph(nodes, edges);
   }
 
@@ -532,23 +555,19 @@ export class ReactFlowAdapter implements RendererAdapter {
       return null;
     }
 
-    const edge = this.lastGraph.edges.find((e) => e.id === edgeId);
-    if (!edge) {
+    const edgeFrame = this.cachedLayout.edges.find((e) => e.id === edgeId);
+    if (!edgeFrame || edgeFrame.path.length < 2) {
       return null;
     }
 
-    const sourcePos = this.layoutPositions.get(edge.source);
-    const targetPos = this.layoutPositions.get(edge.target);
-    if (sourcePos === undefined || targetPos === undefined) {
-      return null;
-    }
+    const mid = pathMidpoint(edgeFrame.path);
 
     return {
       edgeId,
-      sourceNodeId: edge.source,
-      targetNodeId: edge.target,
-      x: (sourcePos.x + targetPos.x) / 2,
-      y: (sourcePos.y + targetPos.y) / 2,
+      sourceNodeId: edgeFrame.sourceId,
+      targetNodeId: edgeFrame.targetId,
+      x: mid.x,
+      y: mid.y,
     };
   }
 
@@ -565,12 +584,16 @@ export class ReactFlowAdapter implements RendererAdapter {
       return;
     }
 
-    const pos = this.layoutPositions.get(target.nodeId);
-    if (pos === undefined) {
+    const nodeFrame = this.cachedLayout.nodes.find((n) => n.id === target.nodeId);
+    if (nodeFrame === undefined) {
       return;
     }
 
-    this.controller.setCenter(pos.x, pos.y, { duration: 200 });
+    this.controller.setCenter(
+      nodeFrame.x + nodeFrame.width / 2,
+      nodeFrame.y + nodeFrame.height / 2,
+      { duration: 200 },
+    );
   }
 
   /**
@@ -584,30 +607,7 @@ export class ReactFlowAdapter implements RendererAdapter {
    * @returns The layout snapshot.
    */
   getLayoutSnapshot(): LayoutSnapshot {
-    if (this.lastGraph === null) {
-      return { nodes: [], edges: [] };
-    }
-
-    const nodeFrames = this.lastGraph.nodes.map((n) => {
-      const pos = this.layoutPositions.get(n.id) ?? { x: 0, y: 0 };
-      return { id: n.id, x: pos.x, y: pos.y, width: 150, height: 40 };
-    });
-
-    const edgeFrames = this.lastGraph.edges.map((e) => {
-      const srcPos = this.layoutPositions.get(e.source) ?? { x: 0, y: 0 };
-      const tgtPos = this.layoutPositions.get(e.target) ?? { x: 0, y: 0 };
-      return {
-        id: e.id,
-        sourceId: e.source,
-        targetId: e.target,
-        path: [
-          { x: srcPos.x, y: srcPos.y },
-          { x: tgtPos.x, y: tgtPos.y },
-        ],
-      };
-    });
-
-    return { nodes: nodeFrames, edges: edgeFrames };
+    return this.cachedLayout;
   }
 
   /**
@@ -620,23 +620,12 @@ export class ReactFlowAdapter implements RendererAdapter {
    * @returns An array of edge insertion anchors.
    */
   getInsertionAnchors(): EdgeInsertionAnchor[] {
-    if (this.lastGraph === null) {
-      return [];
-    }
-
-    return this.lastGraph.edges.flatMap((e) => {
-      const srcPos = this.layoutPositions.get(e.source);
-      const tgtPos = this.layoutPositions.get(e.target);
-      if (srcPos === undefined || tgtPos === undefined) {
+    return this.cachedLayout.edges.flatMap((edgeFrame) => {
+      if (edgeFrame.path.length < 2) {
         return [];
       }
-      return [
-        {
-          edgeId: e.id,
-          x: (srcPos.x + tgtPos.x) / 2,
-          y: (srcPos.y + tgtPos.y) / 2,
-        },
-      ];
+      const mid = pathMidpoint(edgeFrame.path);
+      return [{ edgeId: edgeFrame.id, x: mid.x, y: mid.y }];
     });
   }
 
@@ -652,8 +641,8 @@ export class ReactFlowAdapter implements RendererAdapter {
   setOrientation(mode: OrientationMode): void {
     this.orientation = mode;
     if (this.lastGraph !== null) {
-      const { nodes, edges, positions } = toRFGraph(this.lastGraph);
-      this.layoutPositions = positions;
+      const { nodes, edges, layout } = toRFGraph(this.lastGraph, this.orientation);
+      this.cachedLayout = layout;
       this.controller?.updateGraph(nodes, edges);
     }
   }
@@ -693,7 +682,7 @@ export class ReactFlowAdapter implements RendererAdapter {
     this.events.offSelectionChange();
     this.controller = null;
     this.lastGraph = null;
-    this.layoutPositions.clear();
+    this.cachedLayout = { nodes: [], edges: [] };
     if (this.root !== null) {
       this.root.unmount();
       this.root = null;
