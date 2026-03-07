@@ -289,6 +289,75 @@ function pathMidpoint(path: Point[]): Point {
   return path[path.length - 1] as Point;
 }
 
+/**
+ * Return a deep copy of a layout snapshot.
+ *
+ * @param snapshot - Snapshot to clone.
+ * @returns Cloned snapshot.
+ */
+function cloneLayoutSnapshot(snapshot: LayoutSnapshot): LayoutSnapshot {
+  return {
+    nodes: snapshot.nodes.map((node) => ({ ...node })),
+    edges: snapshot.edges.map((edge) => ({
+      ...edge,
+      path: edge.path.map((point) => ({ ...point })),
+    })),
+  };
+}
+
+/**
+ * Sample an SVG path into viewport-relative points.
+ *
+ * @param pathEl - The path element to sample.
+ * @param containerRect - Bounding rect of the renderer container.
+ * @returns Sampled points, or `null` when SVG geometry APIs are unavailable.
+ */
+function samplePathInViewport(
+  pathEl: SVGPathElement,
+  containerRect: DOMRect,
+): Point[] | null {
+  if (
+    typeof pathEl.getTotalLength !== "function" ||
+    typeof pathEl.getPointAtLength !== "function"
+  ) {
+    return null;
+  }
+
+  try {
+    const total = pathEl.getTotalLength();
+    if (!Number.isFinite(total) || total < 0) {
+      return null;
+    }
+
+    const sampleCount = Math.max(2, Math.min(25, Math.ceil(total / 48) + 1));
+    const ownerSvg = pathEl.ownerSVGElement;
+    const ctm = typeof pathEl.getScreenCTM === "function" ? pathEl.getScreenCTM() : null;
+
+    const points: Point[] = [];
+    for (let i = 0; i < sampleCount; i++) {
+      const lengthAt = sampleCount === 1 ? 0 : (total * i) / (sampleCount - 1);
+      const raw = pathEl.getPointAtLength(lengthAt);
+
+      if (ownerSvg !== null && ctm !== null && typeof ownerSvg.createSVGPoint === "function") {
+        const svgPoint = ownerSvg.createSVGPoint();
+        svgPoint.x = raw.x;
+        svgPoint.y = raw.y;
+        const viewportPoint = svgPoint.matrixTransform(ctm);
+        points.push({
+          x: viewportPoint.x - containerRect.left,
+          y: viewportPoint.y - containerRect.top,
+        });
+      } else {
+        points.push({ x: raw.x, y: raw.y });
+      }
+    }
+
+    return points.length >= 2 ? points : null;
+  } catch {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Adapter
 // ---------------------------------------------------------------------------
@@ -656,7 +725,7 @@ export class ReteLitAdapter implements RendererAdapter {
    * @returns The layout snapshot.
    */
   getLayoutSnapshot(): LayoutSnapshot {
-    return this.cachedLayout;
+    return cloneLayoutSnapshot(this.snapshotFromDom());
   }
 
   /**
@@ -845,5 +914,85 @@ export class ReteLitAdapter implements RendererAdapter {
     if (generation === this.applyGeneration) {
       void AreaExtensions.zoomAt(area, editor.getNodes());
     }
+  }
+
+  /**
+   * Build a snapshot from rendered DOM geometry when available.
+   *
+   * Falls back to cached deterministic layout coordinates for any node or edge
+   * that cannot be resolved from the current DOM.
+   *
+   * @returns Snapshot aligned with current viewport state.
+   */
+  private snapshotFromDom(): LayoutSnapshot {
+    const graph = this.lastGraph;
+    if (graph === null) {
+      return this.cachedLayout;
+    }
+
+    const cachedNodeById = new Map(this.cachedLayout.nodes.map((node) => [node.id, node]));
+    const cachedEdgeById = new Map(this.cachedLayout.edges.map((edge) => [edge.id, edge]));
+    const nodeFrameById = new Map<string, LayoutSnapshot["nodes"][number]>();
+    const containerRect = this.mounted?.container.getBoundingClientRect();
+
+    const nodes = graph.nodes.map((graphNode) => {
+      const fallback = cachedNodeById.get(graphNode.id) ?? {
+        id: graphNode.id,
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+      };
+
+      let frame = fallback;
+      if (this.mounted !== null) {
+        const reteNodeId = this.graphIdToReteNode.get(graphNode.id);
+        const nodeEl =
+          reteNodeId === undefined ? null : (this.mounted.area.nodeViews.get(reteNodeId)?.element ?? null);
+        if (nodeEl !== null && containerRect !== undefined) {
+          const rect = nodeEl.getBoundingClientRect();
+          frame = {
+            id: graphNode.id,
+            x: rect.left - containerRect.left,
+            y: rect.top - containerRect.top,
+            width: rect.width,
+            height: rect.height,
+          };
+        }
+      }
+
+      nodeFrameById.set(graphNode.id, frame);
+      return frame;
+    });
+
+    const edges = graph.edges.map((graphEdge) => {
+      const fallback = cachedEdgeById.get(graphEdge.id);
+      const reteConnId = this.graphIdToReteConn.get(graphEdge.id);
+      const pathEl =
+        reteConnId === undefined ? null : this.findConnectionPathElement(reteConnId);
+      const sampledPath =
+        pathEl === null || containerRect === undefined ? null : samplePathInViewport(pathEl, containerRect);
+
+      let path = sampledPath ?? fallback?.path ?? [];
+      if (path.length < 2) {
+        const source = nodeFrameById.get(graphEdge.source);
+        const target = nodeFrameById.get(graphEdge.target);
+        if (source !== undefined && target !== undefined) {
+          path = [
+            { x: source.x + source.width / 2, y: source.y + source.height / 2 },
+            { x: target.x + target.width / 2, y: target.y + target.height / 2 },
+          ];
+        }
+      }
+
+      return {
+        id: graphEdge.id,
+        sourceId: graphEdge.source,
+        targetId: graphEdge.target,
+        path,
+      };
+    });
+
+    return { nodes, edges };
   }
 }

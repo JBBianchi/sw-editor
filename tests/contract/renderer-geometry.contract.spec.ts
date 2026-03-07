@@ -1,4 +1,8 @@
 /**
+ * @vitest-environment happy-dom
+ */
+
+/**
  * Contract tests for renderer geometry surface.
  *
  * Verifies that both renderer adapters (React Flow and Rete-Lit) satisfy the
@@ -13,7 +17,7 @@
  * @module
  */
 
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Stub browser-specific dependencies required by the rete-lit renderer.
@@ -98,6 +102,7 @@ import type {
   LayoutSnapshot,
   OrientationMode,
   RendererAdapter,
+  WorkflowGraph,
 } from "@sw-editor/editor-renderer-contract";
 import { ReactFlowAdapter } from "@sw-editor/editor-renderer-react-flow";
 import { ReteLitAdapter } from "@sw-editor/editor-renderer-rete-lit";
@@ -109,7 +114,232 @@ import { ReteLitAdapter } from "@sw-editor/editor-renderer-rete-lit";
 /** Adapter entry with a human-readable label. */
 interface AdapterEntry {
   label: string;
-  adapter: RendererAdapter;
+  createAdapter: () => RendererAdapter;
+}
+
+/**
+ * Define a stable mocked bounding rectangle for an element.
+ *
+ * @param element - Element to patch.
+ * @param rect - Rectangle values.
+ */
+function setMockRect(
+  element: Element,
+  rect: { left: number; top: number; width: number; height: number },
+): void {
+  Object.defineProperty(element, "getBoundingClientRect", {
+    value: () =>
+      ({
+        x: rect.left,
+        y: rect.top,
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+        right: rect.left + rect.width,
+        bottom: rect.top + rect.height,
+        toJSON: () => ({}),
+      }) satisfies DOMRect,
+    configurable: true,
+  });
+}
+
+/**
+ * Build an SVG path element with deterministic geometry APIs for tests.
+ *
+ * @param points - Ordered points defining a polyline.
+ * @returns SVG path element.
+ */
+function createMockSvgPath(points: Array<{ x: number; y: number }>): SVGPathElement {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  svg.append(path);
+
+  const segmentLengths: number[] = [];
+  let totalLength = 0;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1]!;
+    const b = points[i]!;
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    segmentLengths.push(len);
+    totalLength += len;
+  }
+
+  const pathAny = path as unknown as {
+    getTotalLength: () => number;
+    getPointAtLength: (distance: number) => DOMPoint;
+    getScreenCTM: () => DOMMatrix | null;
+  };
+
+  pathAny.getTotalLength = () => totalLength;
+  pathAny.getScreenCTM = () => null;
+  pathAny.getPointAtLength = (distance: number) => {
+    if (points.length === 0) {
+      return { x: 0, y: 0 } as DOMPoint;
+    }
+    if (distance <= 0 || segmentLengths.length === 0) {
+      const p = points[0]!;
+      return { x: p.x, y: p.y } as DOMPoint;
+    }
+    if (distance >= totalLength) {
+      const p = points[points.length - 1]!;
+      return { x: p.x, y: p.y } as DOMPoint;
+    }
+
+    let traversed = 0;
+    for (let i = 0; i < segmentLengths.length; i++) {
+      const segLen = segmentLengths[i]!;
+      if (traversed + segLen >= distance) {
+        const from = points[i]!;
+        const to = points[i + 1]!;
+        const t = segLen === 0 ? 0 : (distance - traversed) / segLen;
+        return {
+          x: from.x + (to.x - from.x) * t,
+          y: from.y + (to.y - from.y) * t,
+        } as DOMPoint;
+      }
+      traversed += segLen;
+    }
+
+    const p = points[points.length - 1]!;
+    return { x: p.x, y: p.y } as DOMPoint;
+  };
+
+  return path;
+}
+
+/**
+ * Configure adapter internals with deterministic DOM geometry for snapshot tests.
+ *
+ * @param adapter - Adapter under test.
+ * @returns The graph used to configure internals.
+ */
+function configureDomSnapshotFixture(adapter: RendererAdapter): WorkflowGraph {
+  const graph: WorkflowGraph = {
+    nodes: [
+      { id: "__start__", kind: "start", data: {} },
+      { id: "task-a", kind: "task", data: { name: "A" } },
+      { id: "__end__", kind: "end", data: {} },
+    ],
+    edges: [
+      { id: "e1", source: "__start__", target: "task-a" },
+      { id: "e2", source: "task-a", target: "__end__" },
+    ],
+  };
+
+  const container = document.createElement("div");
+  setMockRect(container, { left: 100, top: 200, width: 1000, height: 800 });
+
+  const reactStart = document.createElement("div");
+  reactStart.className = "react-flow__node";
+  reactStart.setAttribute("data-id", "__start__");
+  setMockRect(reactStart, { left: 140, top: 230, width: 120, height: 48 });
+  container.append(reactStart);
+
+  const reactTask = document.createElement("div");
+  reactTask.className = "react-flow__node";
+  reactTask.setAttribute("data-id", "task-a");
+  setMockRect(reactTask, { left: 390, top: 320, width: 150, height: 58 });
+  container.append(reactTask);
+
+  const reactEnd = document.createElement("div");
+  reactEnd.className = "react-flow__node";
+  reactEnd.setAttribute("data-id", "__end__");
+  setMockRect(reactEnd, { left: 700, top: 410, width: 120, height: 48 });
+  container.append(reactEnd);
+
+  const edge1Group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  edge1Group.setAttribute("class", "react-flow__edge");
+  edge1Group.setAttribute("data-id", "e1");
+  const edge1Path = createMockSvgPath([
+    { x: 150, y: 64 },
+    { x: 260, y: 102 },
+    { x: 360, y: 149 },
+  ]);
+  edge1Path.setAttribute("class", "react-flow__edge-path");
+  edge1Group.append(edge1Path);
+  container.append(edge1Group);
+
+  const edge2Group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  edge2Group.setAttribute("class", "react-flow__edge");
+  edge2Group.setAttribute("data-id", "e2");
+  const edge2Path = createMockSvgPath([
+    { x: 460, y: 149 },
+    { x: 560, y: 175 },
+    { x: 670, y: 226 },
+  ]);
+  edge2Path.setAttribute("class", "react-flow__edge-path");
+  edge2Group.append(edge2Path);
+  container.append(edge2Group);
+
+  const fallback: LayoutSnapshot = {
+    nodes: graph.nodes.map((node) => ({ id: node.id, x: 0, y: 0, width: 1, height: 1 })),
+    edges: graph.edges.map((edge) => ({
+      id: edge.id,
+      sourceId: edge.source,
+      targetId: edge.target,
+      path: [
+        { x: 0, y: 0 },
+        { x: 1, y: 1 },
+      ],
+    })),
+  };
+
+  if (adapter.rendererId === "react-flow") {
+    const internal = adapter as unknown as {
+      container: HTMLElement | null;
+      lastGraph: WorkflowGraph | null;
+      cachedLayout: LayoutSnapshot;
+    };
+    internal.container = container;
+    internal.lastGraph = graph;
+    internal.cachedLayout = fallback;
+    return graph;
+  }
+
+  const reteInternal = adapter as unknown as {
+    mounted: {
+      container: HTMLElement;
+      area: { nodeViews: Map<string, { element: HTMLElement }> };
+      editor: unknown;
+    } | null;
+    lastGraph: WorkflowGraph | null;
+    cachedLayout: LayoutSnapshot;
+    graphIdToReteNode: Map<string, string>;
+    graphIdToReteConn: Map<string, string>;
+  };
+
+  const nodeViews = new Map<string, { element: HTMLElement }>();
+  const reteNodeA = "rete-node-start";
+  const reteNodeB = "rete-node-task";
+  const reteNodeC = "rete-node-end";
+  nodeViews.set(reteNodeA, { element: reactStart });
+  nodeViews.set(reteNodeB, { element: reactTask });
+  nodeViews.set(reteNodeC, { element: reactEnd });
+
+  const reteConn1 = "rete-edge-1";
+  const reteConn2 = "rete-edge-2";
+  const reteConn1Wrap = document.createElement("div");
+  reteConn1Wrap.setAttribute("data-testid", `connection-${reteConn1}`);
+  reteConn1Wrap.append(createMockSvgPath([{ x: 150, y: 64 }, { x: 260, y: 102 }, { x: 360, y: 149 }]));
+  container.append(reteConn1Wrap);
+  const reteConn2Wrap = document.createElement("div");
+  reteConn2Wrap.setAttribute("data-testid", `connection-${reteConn2}`);
+  reteConn2Wrap.append(createMockSvgPath([{ x: 460, y: 149 }, { x: 560, y: 175 }, { x: 670, y: 226 }]));
+  container.append(reteConn2Wrap);
+
+  reteInternal.mounted = { container, area: { nodeViews }, editor: {} };
+  (reteInternal.mounted.area as { destroy?: () => void }).destroy = () => {};
+  reteInternal.lastGraph = graph;
+  reteInternal.cachedLayout = fallback;
+  reteInternal.graphIdToReteNode.clear();
+  reteInternal.graphIdToReteConn.clear();
+  reteInternal.graphIdToReteNode.set("__start__", reteNodeA);
+  reteInternal.graphIdToReteNode.set("task-a", reteNodeB);
+  reteInternal.graphIdToReteNode.set("__end__", reteNodeC);
+  reteInternal.graphIdToReteConn.set("e1", reteConn1);
+  reteInternal.graphIdToReteConn.set("e2", reteConn2);
+  return graph;
 }
 
 /**
@@ -159,11 +389,21 @@ function assertEdgeInsertionAnchor(anchor: EdgeInsertionAnchor): void {
 // ---------------------------------------------------------------------------
 
 const adapters: AdapterEntry[] = [
-  { label: "react-flow", adapter: new ReactFlowAdapter() },
-  { label: "rete-lit", adapter: new ReteLitAdapter() },
+  { label: "react-flow", createAdapter: () => new ReactFlowAdapter() },
+  { label: "rete-lit", createAdapter: () => new ReteLitAdapter() },
 ];
 
-describe.each(adapters)("$label renderer — geometry contract", ({ adapter }) => {
+describe.each(adapters)("$label renderer — geometry contract", ({ createAdapter }) => {
+  let adapter: RendererAdapter;
+
+  beforeEach(() => {
+    adapter = createAdapter();
+  });
+
+  afterEach(() => {
+    adapter.dispose();
+  });
+
   // -------------------------------------------------------------------
   // getLayoutSnapshot()
   // -------------------------------------------------------------------
@@ -184,6 +424,35 @@ describe.each(adapters)("$label renderer — geometry contract", ({ adapter }) =
       const snapshot: LayoutSnapshot = adapter.getLayoutSnapshot();
       expect(snapshot).toHaveProperty("nodes");
       expect(snapshot).toHaveProperty("edges");
+    });
+
+    it("returns viewport-relative node frames and edge paths from rendered DOM geometry", () => {
+      configureDomSnapshotFixture(adapter);
+      const snapshot = adapter.getLayoutSnapshot();
+      assertLayoutSnapshot(snapshot);
+
+      expect(snapshot.nodes).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: "__start__", x: 40, y: 30, width: 120, height: 48 }),
+          expect.objectContaining({ id: "task-a", x: 290, y: 120, width: 150, height: 58 }),
+          expect.objectContaining({ id: "__end__", x: 600, y: 210, width: 120, height: 48 }),
+        ]),
+      );
+      expect(snapshot.edges).toHaveLength(2);
+      for (const edge of snapshot.edges) {
+        expect(edge.path.length).toBeGreaterThanOrEqual(2);
+      }
+    });
+
+    it("returns a defensive copy that cannot mutate adapter-internal snapshot state", () => {
+      configureDomSnapshotFixture(adapter);
+      const first = adapter.getLayoutSnapshot();
+      first.nodes[0]!.x = -999;
+      first.edges[0]!.path[0]!.x = -999;
+
+      const second = adapter.getLayoutSnapshot();
+      expect(second.nodes[0]!.x).not.toBe(-999);
+      expect(second.edges[0]!.path[0]!.x).not.toBe(-999);
     });
   });
 
