@@ -4,15 +4,118 @@
  *
  * Uses helpers from T002 ({@link insertTaskAtEdge}, {@link assertNodeOrder},
  * {@link loadFixtureGraph}) and fixtures from T001 (insert-layout-start-end,
- * insert-layout-linear, multi-task).
+ * insert-layout-linear, multi-task) plus geometry fixtures (insert-geometry-tb,
+ * insert-geometry-lr).
+ *
+ * Includes:
+ * - Node ordering assertions after insertion
+ * - Midpoint assertions using {@link assertMidpointWithinTolerance}
+ * - Ordering regression tests for TB and LR orientations
  *
  * @module
  */
 
-import { END_NODE_ID, START_NODE_ID } from "@sw-editor/editor-core";
+import { END_NODE_ID, START_NODE_ID, type WorkflowGraph } from "@sw-editor/editor-core";
+import type { EdgeInsertionAnchor, LayoutSnapshot } from "@sw-editor/editor-renderer-contract";
 import { describe, expect, it } from "vitest";
 
+import { assertMidpointWithinTolerance, type EdgePath, type Point } from "./geometry-assertions.helpers.js";
 import { assertNodeOrder, insertTaskAtEdge, loadFixtureGraph } from "./insertion-layout.helpers.js";
+
+// ---------------------------------------------------------------------------
+// Simulated layout helpers
+// ---------------------------------------------------------------------------
+
+/** Horizontal gap between nodes for top-to-bottom simulated layout. */
+const TB_GAP = 150;
+
+/** Vertical gap between nodes for left-to-right simulated layout. */
+const LR_GAP = 200;
+
+/**
+ * Builds a simulated layout snapshot for a graph in top-to-bottom orientation.
+ *
+ * Nodes are positioned vertically at `index * TB_GAP`, centered at x=0.
+ *
+ * @param graph - The workflow graph to lay out.
+ * @returns A simulated layout snapshot.
+ */
+function simulateTBLayout(graph: WorkflowGraph): LayoutSnapshot {
+  return {
+    nodes: graph.nodes.map((n, i) => ({
+      id: n.id,
+      x: 0,
+      y: i * TB_GAP,
+      width: 100,
+      height: 40,
+    })),
+    edges: graph.edges.map((e) => {
+      const srcIdx = graph.nodes.findIndex((n) => n.id === e.source);
+      const tgtIdx = graph.nodes.findIndex((n) => n.id === e.target);
+      return {
+        id: e.id,
+        sourceId: e.source,
+        targetId: e.target,
+        path: [
+          { x: 50, y: srcIdx * TB_GAP + 40 },
+          { x: 50, y: tgtIdx * TB_GAP },
+        ],
+      };
+    }),
+  };
+}
+
+/**
+ * Builds a simulated layout snapshot for a graph in left-to-right orientation.
+ *
+ * Nodes are positioned horizontally at `index * LR_GAP`, centered at y=0.
+ *
+ * @param graph - The workflow graph to lay out.
+ * @returns A simulated layout snapshot.
+ */
+function simulateLRLayout(graph: WorkflowGraph): LayoutSnapshot {
+  return {
+    nodes: graph.nodes.map((n, i) => ({
+      id: n.id,
+      x: i * LR_GAP,
+      y: 0,
+      width: 100,
+      height: 40,
+    })),
+    edges: graph.edges.map((e) => {
+      const srcIdx = graph.nodes.findIndex((n) => n.id === e.source);
+      const tgtIdx = graph.nodes.findIndex((n) => n.id === e.target);
+      return {
+        id: e.id,
+        sourceId: e.source,
+        targetId: e.target,
+        path: [
+          { x: srcIdx * LR_GAP + 100, y: 20 },
+          { x: tgtIdx * LR_GAP, y: 20 },
+        ],
+      };
+    }),
+  };
+}
+
+/**
+ * Computes insertion anchors from a layout snapshot by placing each anchor
+ * at the midpoint of its edge path.
+ *
+ * @param snapshot - The simulated layout snapshot.
+ * @returns An array of edge insertion anchors.
+ */
+function computeInsertionAnchors(snapshot: LayoutSnapshot): EdgeInsertionAnchor[] {
+  return snapshot.edges.map((edge) => {
+    const start = edge.path[0];
+    const end = edge.path[edge.path.length - 1];
+    return {
+      edgeId: edge.id,
+      x: (start.x + end.x) / 2,
+      y: (start.y + end.y) / 2,
+    };
+  });
+}
 
 describe("insertion-layout-order — US1: node ordering after insert", () => {
   // -------------------------------------------------------------------------
@@ -132,6 +235,220 @@ describe("insertion-layout-order — US1: node ordering after insert", () => {
 
       // Total edge count: original 3 edges, minus 1 removed, plus 2 new = 4
       expect(result.graph.edges).toHaveLength(4);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Midpoint assertions — TB orientation
+  // -------------------------------------------------------------------------
+
+  describe("midpoint assertions — top-to-bottom orientation", () => {
+    it("insertion anchors lie at edge midpoints within tolerance (linear)", () => {
+      const graph = loadFixtureGraph("insert-layout-linear.json");
+      const snapshot = simulateTBLayout(graph);
+      const anchors = computeInsertionAnchors(snapshot);
+      const tolerancePx = 1;
+
+      for (const anchor of anchors) {
+        const edgeFrame = snapshot.edges.find((e) => e.id === anchor.edgeId);
+        expect(edgeFrame, `edge frame for ${anchor.edgeId} must exist`).toBeDefined();
+        assertMidpointWithinTolerance(
+          { x: anchor.x, y: anchor.y },
+          edgeFrame!.path as EdgePath,
+          tolerancePx,
+        );
+      }
+    });
+
+    it("insertion anchors lie at edge midpoints after insert (TB geometry fixture)", () => {
+      const graph = loadFixtureGraph("insert-geometry-tb.json");
+      const firstEdge = graph.edges[0];
+      const result = insertTaskAtEdge(graph, firstEdge.id);
+
+      const snapshot = simulateTBLayout(result.graph);
+      const anchors = computeInsertionAnchors(snapshot);
+      const tolerancePx = 1;
+
+      for (const anchor of anchors) {
+        const edgeFrame = snapshot.edges.find((e) => e.id === anchor.edgeId);
+        expect(edgeFrame).toBeDefined();
+        assertMidpointWithinTolerance(
+          { x: anchor.x, y: anchor.y },
+          edgeFrame!.path as EdgePath,
+          tolerancePx,
+        );
+      }
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Midpoint assertions — LR orientation
+  // -------------------------------------------------------------------------
+
+  describe("midpoint assertions — left-to-right orientation", () => {
+    it("insertion anchors lie at edge midpoints within tolerance (linear)", () => {
+      const graph = loadFixtureGraph("insert-layout-linear.json");
+      const snapshot = simulateLRLayout(graph);
+      const anchors = computeInsertionAnchors(snapshot);
+      const tolerancePx = 1;
+
+      for (const anchor of anchors) {
+        const edgeFrame = snapshot.edges.find((e) => e.id === anchor.edgeId);
+        expect(edgeFrame).toBeDefined();
+        assertMidpointWithinTolerance(
+          { x: anchor.x, y: anchor.y },
+          edgeFrame!.path as EdgePath,
+          tolerancePx,
+        );
+      }
+    });
+
+    it("insertion anchors lie at edge midpoints after insert (LR geometry fixture)", () => {
+      const graph = loadFixtureGraph("insert-geometry-lr.json");
+      const firstEdge = graph.edges[0];
+      const result = insertTaskAtEdge(graph, firstEdge.id);
+
+      const snapshot = simulateLRLayout(result.graph);
+      const anchors = computeInsertionAnchors(snapshot);
+      const tolerancePx = 1;
+
+      for (const anchor of anchors) {
+        const edgeFrame = snapshot.edges.find((e) => e.id === anchor.edgeId);
+        expect(edgeFrame).toBeDefined();
+        assertMidpointWithinTolerance(
+          { x: anchor.x, y: anchor.y },
+          edgeFrame!.path as EdgePath,
+          tolerancePx,
+        );
+      }
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Ordering regressions — TB orientation
+  // -------------------------------------------------------------------------
+
+  describe("ordering regressions — top-to-bottom (insert-geometry-tb)", () => {
+    it("preserves node order after inserting at the first edge", () => {
+      const graph = loadFixtureGraph("insert-geometry-tb.json");
+      const firstEdge = graph.edges[0];
+      const nodesBefore = graph.nodes.map((n) => n.id);
+      const result = insertTaskAtEdge(graph, firstEdge.id, "tbInserted");
+
+      // The new node must appear between the source and target of the first edge
+      const srcIdx = nodesBefore.indexOf(firstEdge.source);
+      const tgtIdx = nodesBefore.indexOf(firstEdge.target);
+      const afterIds = result.graph.nodes.map((n) => n.id);
+      const newIdx = afterIds.indexOf(result.nodeId);
+
+      expect(newIdx).toBeGreaterThan(srcIdx);
+      expect(newIdx).toBeLessThan(tgtIdx + 1); // +1 because array shifted
+    });
+
+    it("insertion anchors follow edge order in the graph (TB)", () => {
+      const graph = loadFixtureGraph("insert-geometry-tb.json");
+      const snapshot = simulateTBLayout(graph);
+      const anchors = computeInsertionAnchors(snapshot);
+
+      // Anchors for edges along the main spine should have increasing y
+      // (top-to-bottom layout). Filter to main-spine edges (sequential node pairs).
+      const mainSpineEdges = graph.edges.filter((e) => {
+        const srcIdx = graph.nodes.findIndex((n) => n.id === e.source);
+        const tgtIdx = graph.nodes.findIndex((n) => n.id === e.target);
+        return tgtIdx === srcIdx + 1;
+      });
+
+      const spineAnchors = mainSpineEdges
+        .map((e) => anchors.find((a) => a.edgeId === e.id))
+        .filter((a): a is EdgeInsertionAnchor => a != null);
+
+      for (let i = 1; i < spineAnchors.length; i++) {
+        expect(
+          spineAnchors[i].y,
+          `anchor ${spineAnchors[i].edgeId} y should be > previous anchor y`,
+        ).toBeGreaterThan(spineAnchors[i - 1].y);
+      }
+    });
+
+    it("double insertion preserves ordering (TB)", () => {
+      const graph = loadFixtureGraph("insert-geometry-tb.json");
+      const firstEdge = graph.edges[0];
+      const first = insertTaskAtEdge(graph, firstEdge.id, "tbFirst");
+
+      // Insert again on the new edge between source and first inserted node
+      const newEdgeId = `${firstEdge.source}->${first.nodeId}`;
+      const second = insertTaskAtEdge(first.graph, newEdgeId, "tbSecond");
+
+      const ids = second.graph.nodes.map((n) => n.id);
+      const srcIdx = ids.indexOf(firstEdge.source);
+      const secondIdx = ids.indexOf(second.nodeId);
+      const firstIdx = ids.indexOf(first.nodeId);
+
+      expect(secondIdx).toBeGreaterThan(srcIdx);
+      expect(firstIdx).toBeGreaterThan(secondIdx);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Ordering regressions — LR orientation
+  // -------------------------------------------------------------------------
+
+  describe("ordering regressions — left-to-right (insert-geometry-lr)", () => {
+    it("preserves node order after inserting at the first edge", () => {
+      const graph = loadFixtureGraph("insert-geometry-lr.json");
+      const firstEdge = graph.edges[0];
+      const nodesBefore = graph.nodes.map((n) => n.id);
+      const result = insertTaskAtEdge(graph, firstEdge.id, "lrInserted");
+
+      const srcIdx = nodesBefore.indexOf(firstEdge.source);
+      const tgtIdx = nodesBefore.indexOf(firstEdge.target);
+      const afterIds = result.graph.nodes.map((n) => n.id);
+      const newIdx = afterIds.indexOf(result.nodeId);
+
+      expect(newIdx).toBeGreaterThan(srcIdx);
+      expect(newIdx).toBeLessThan(tgtIdx + 1);
+    });
+
+    it("insertion anchors follow edge order in the graph (LR)", () => {
+      const graph = loadFixtureGraph("insert-geometry-lr.json");
+      const snapshot = simulateLRLayout(graph);
+      const anchors = computeInsertionAnchors(snapshot);
+
+      // Anchors for edges along the main spine should have increasing x
+      // (left-to-right layout).
+      const mainSpineEdges = graph.edges.filter((e) => {
+        const srcIdx = graph.nodes.findIndex((n) => n.id === e.source);
+        const tgtIdx = graph.nodes.findIndex((n) => n.id === e.target);
+        return tgtIdx === srcIdx + 1;
+      });
+
+      const spineAnchors = mainSpineEdges
+        .map((e) => anchors.find((a) => a.edgeId === e.id))
+        .filter((a): a is EdgeInsertionAnchor => a != null);
+
+      for (let i = 1; i < spineAnchors.length; i++) {
+        expect(
+          spineAnchors[i].x,
+          `anchor ${spineAnchors[i].edgeId} x should be > previous anchor x`,
+        ).toBeGreaterThan(spineAnchors[i - 1].x);
+      }
+    });
+
+    it("double insertion preserves ordering (LR)", () => {
+      const graph = loadFixtureGraph("insert-geometry-lr.json");
+      const firstEdge = graph.edges[0];
+      const first = insertTaskAtEdge(graph, firstEdge.id, "lrFirst");
+
+      const newEdgeId = `${firstEdge.source}->${first.nodeId}`;
+      const second = insertTaskAtEdge(first.graph, newEdgeId, "lrSecond");
+
+      const ids = second.graph.nodes.map((n) => n.id);
+      const srcIdx = ids.indexOf(firstEdge.source);
+      const secondIdx = ids.indexOf(second.nodeId);
+      const firstIdx = ids.indexOf(first.nodeId);
+
+      expect(secondIdx).toBeGreaterThan(srcIdx);
+      expect(firstIdx).toBeGreaterThan(secondIdx);
     });
   });
 });
