@@ -108,7 +108,7 @@ export class InsertionUI {
   private readonly serializeGraph: SerializeGraphCallback;
   private readonly focusNode: FocusNodeCallback | undefined;
   private readonly rendererAdapter:
-    | Pick<RendererAdapter, "getEdgeAnchor" | "focusNode">
+    | Pick<RendererAdapter, "getEdgeAnchor" | "getInsertionAnchors" | "focusNode">
     | undefined;
 
   /** Live graph reference; must be kept current by the host. */
@@ -148,7 +148,7 @@ export class InsertionUI {
     counter: RevisionCounter;
     serializeGraph: SerializeGraphCallback;
     focusNode?: FocusNodeCallback;
-    rendererAdapter?: Pick<RendererAdapter, "getEdgeAnchor" | "focusNode">;
+    rendererAdapter?: Pick<RendererAdapter, "getEdgeAnchor" | "getInsertionAnchors" | "focusNode">;
   }) {
     this.container = options.container;
     this.bridge = options.bridge;
@@ -211,7 +211,12 @@ export class InsertionUI {
   }
 
   /**
-   * Replaces the current graph reference with an updated one.
+   * Replaces the current graph reference with an updated one and reconciles
+   * insertion affordances against the new edge set.
+   *
+   * - Removes affordances for edges that no longer exist in the new graph.
+   * - Creates affordances for newly added edges.
+   * - Re-positions existing affordances when edge anchor coordinates change.
    *
    * Call this whenever the graph changes (e.g., after a prior insertion) so
    * that subsequent insertions operate on the latest state.
@@ -219,7 +224,29 @@ export class InsertionUI {
    * @param graph - The updated {@link WorkflowGraph}.
    */
   updateGraph(graph: WorkflowGraph): void {
+    const previousEdgeIds = new Set(this.graph.edges.map((e) => e.id));
+    const currentEdgeIds = new Set(graph.edges.map((e) => e.id));
+
     this.graph = graph;
+
+    // Prune affordances for edges that were removed.
+    for (const edgeId of previousEdgeIds) {
+      if (!currentEdgeIds.has(edgeId)) {
+        this.detachFromEdge(edgeId);
+      }
+    }
+
+    // Close any open menu whose target edge no longer exists.
+    if (this.activeMenu) {
+      // biome-ignore lint/complexity/useLiteralKeys: TypeScript requires bracket notation for index signatures
+      const menuEdgeId = this.activeMenu.dataset["edgeId"];
+      if (menuEdgeId && !currentEdgeIds.has(menuEdgeId)) {
+        this.closeTaskMenu();
+      }
+    }
+
+    // Add affordances for new edges and re-anchor existing ones.
+    this.reconcileAffordances(currentEdgeIds);
   }
 
   /**
@@ -277,6 +304,43 @@ export class InsertionUI {
     );
 
     return button;
+  }
+
+  /**
+   * Adds affordances for new edges and re-positions existing ones using the
+   * renderer adapter's anchor data.
+   *
+   * @param currentEdgeIds - The set of edge IDs present in the current graph.
+   */
+  private reconcileAffordances(currentEdgeIds: Set<string>): void {
+    if (!this.rendererAdapter) {
+      return;
+    }
+
+    const anchors = this.rendererAdapter.getInsertionAnchors();
+    const anchorMap = new Map(anchors.map((a) => [a.edgeId, a]));
+
+    for (const edgeId of currentEdgeIds) {
+      const anchor = anchorMap.get(edgeId);
+      if (!anchor) {
+        continue;
+      }
+
+      const existing = this.affordances.get(edgeId);
+      if (existing) {
+        // Re-anchor: update position of existing affordance.
+        existing.style.left = `${anchor.x}px`;
+        existing.style.top = `${anchor.y}px`;
+      } else {
+        // New edge: create and append affordance to the container.
+        const button = this.createAffordanceButton(edgeId);
+        button.style.position = "absolute";
+        button.style.left = `${anchor.x}px`;
+        button.style.top = `${anchor.y}px`;
+        this.container.appendChild(button);
+        this.affordances.set(edgeId, button);
+      }
+    }
   }
 
   /**
@@ -341,6 +405,8 @@ export class InsertionUI {
     menu.setAttribute("role", "menu");
     menu.setAttribute("aria-label", "Select task type to insert");
     menu.className = "sw-task-menu";
+    // biome-ignore lint/complexity/useLiteralKeys: TypeScript requires bracket notation for index signatures
+    menu.dataset["edgeId"] = edgeId;
 
     for (const taskType of MVP_TASK_TYPES) {
       const item = document.createElement("button");

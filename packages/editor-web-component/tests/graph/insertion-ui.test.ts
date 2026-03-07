@@ -29,8 +29,9 @@ function makeSerializer(): SerializeGraphCallback {
  * Creates a mock renderer adapter that returns a valid anchor for any edge.
  * This satisfies the requirement that insert controls only appear with valid anchors.
  */
-function makeWildcardAdapter(): Pick<RendererAdapter, "getEdgeAnchor" | "focusNode"> & {
+function makeWildcardAdapter(): Pick<RendererAdapter, "getEdgeAnchor" | "getInsertionAnchors" | "focusNode"> & {
   getEdgeAnchor: ReturnType<typeof vi.fn>;
+  getInsertionAnchors: ReturnType<typeof vi.fn>;
   focusNode: ReturnType<typeof vi.fn>;
 } {
   return {
@@ -41,6 +42,7 @@ function makeWildcardAdapter(): Pick<RendererAdapter, "getEdgeAnchor" | "focusNo
       x: 100,
       y: 200,
     })),
+    getInsertionAnchors: vi.fn(() => []),
     focusNode: vi.fn(),
   };
 }
@@ -71,13 +73,15 @@ function makeHarness(focusNode?: FocusNodeCallback) {
  */
 function makeMockRendererAdapter(anchorOverride?: RendererEdgeAnchor | null): Pick<
   RendererAdapter,
-  "getEdgeAnchor" | "focusNode"
+  "getEdgeAnchor" | "getInsertionAnchors" | "focusNode"
 > & {
   getEdgeAnchor: ReturnType<typeof vi.fn>;
+  getInsertionAnchors: ReturnType<typeof vi.fn>;
   focusNode: ReturnType<typeof vi.fn>;
 } {
   return {
     getEdgeAnchor: vi.fn((_edgeId: string) => anchorOverride ?? null),
+    getInsertionAnchors: vi.fn(() => []),
     focusNode: vi.fn(),
   };
 }
@@ -86,7 +90,7 @@ function makeMockRendererAdapter(anchorOverride?: RendererEdgeAnchor | null): Pi
  * Creates a test harness that passes a renderer adapter to InsertionUI,
  * enabling renderer-anchor–based positioning and focus delegation.
  */
-function makeHarnessWithAdapter(adapter: Pick<RendererAdapter, "getEdgeAnchor" | "focusNode">) {
+function makeHarnessWithAdapter(adapter: Pick<RendererAdapter, "getEdgeAnchor" | "getInsertionAnchors" | "focusNode">) {
   const graph = bootstrapWorkflowGraph();
   const counter = new RevisionCounter();
   const eventTarget = new EventTarget();
