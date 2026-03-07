@@ -11,7 +11,7 @@
  */
 
 import { expect, type Page, test } from "@playwright/test";
-import { assertAffordanceWithinTolerance, waitForAnchorStabilization } from "./insert-geometry.helpers";
+import { assertAffordanceWithinTolerance, waitForAnchorStabilization, waitForLayoutSettled } from "./insert-geometry.helpers";
 
 // ---------------------------------------------------------------------------
 // Selectors and constants
@@ -108,7 +108,10 @@ async function createNewWorkflow(page: Page): Promise<void> {
 async function setOrientation(page: Page, mode: OrientationMode): Promise<void> {
   await page.locator(ORIENTATION_SELECT_SELECTOR).selectOption(mode);
 
-  // Wait for at least one rendered edge element to appear in the DOM.
+  // Use the deterministic settling signal exposed by the harness, then
+  // confirm edge elements are present and anchors are position-stable.
+  await waitForLayoutSettled(page);
+
   const edgeSelector = '[data-testid^="rf__edge-"], [data-connection-id]';
   await page.locator(edgeSelector).first().waitFor({ state: "attached", timeout: 5_000 });
 
@@ -463,6 +466,7 @@ for (const renderer of RENDERERS) {
     test.beforeEach(async ({ page }) => {
       await openEditor(page, renderer.urlSuffix);
       await createNewWorkflow(page);
+      await waitForLayoutSettled(page);
       await waitForAnchorStabilization(page);
     });
 

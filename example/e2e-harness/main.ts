@@ -106,6 +106,9 @@ class SwEditorElement extends HTMLElement {
   /** Monotonic token to ignore obsolete deferred affordance rebuilds. */
   #affordanceSyncToken = 0;
 
+  /** Monotonic generation counter for layout-changing operations. */
+  #layoutGeneration = 0;
+
   // --------------------------------------------------------------------------
   // Lifecycle
   // --------------------------------------------------------------------------
@@ -253,6 +256,10 @@ class SwEditorElement extends HTMLElement {
    * controls are pruned and current anchors are reflected consistently.
    */
   #refreshAffordancesAfterGraphUpdate(): void {
+    const generation = ++this.#layoutGeneration;
+    this.dataset.layoutGeneration = String(generation);
+    delete this.dataset.layoutSettled;
+
     const token = ++this.#affordanceSyncToken;
     const syncIfCurrent = (): void => {
       if (token !== this.#affordanceSyncToken) return;
@@ -261,7 +268,15 @@ class SwEditorElement extends HTMLElement {
 
     syncIfCurrent();
     queueMicrotask(syncIfCurrent);
-    requestAnimationFrame(syncIfCurrent);
+    requestAnimationFrame(() => {
+      syncIfCurrent();
+      // Signal that post-layout affordance rebuild is complete for this
+      // generation. E2e helpers can wait for layoutSettled === layoutGeneration
+      // as a deterministic readiness check.
+      if (generation === this.#layoutGeneration) {
+        this.dataset.layoutSettled = String(generation);
+      }
+    });
   }
 
   /**
