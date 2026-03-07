@@ -73,7 +73,7 @@
 - [ ] T019 [US2] Add viewport transform subscriptions and anchor invalidation in `packages/editor-renderer-react-flow/src/react-flow-adapter.ts`
 - [ ] T020 [US2] Add viewport transform subscriptions and anchor invalidation in `packages/editor-renderer-rete-lit/src/rete-lit-adapter.ts`
 - [ ] T021 [US2] Refresh and prune insertion controls on graph revision changes in `packages/editor-web-component/src/graph/insertion-ui.ts`
-- [ ] T022 [US2] Keep harness affordance lifecycle synchronized with current edges in `example/e2e-harness/main.ts`
+- [X] T022 [US2] Keep harness affordance lifecycle synchronized with current edges in `example/e2e-harness/main.ts`
 - [ ] T023 [P] [US2] Add stale-anchor cleanup regressions in `tests/integration/insertion-anchor-refresh.spec.ts`
 
 **Checkpoint**: Anchor alignment remains stable after viewport and graph changes with no stale controls.
