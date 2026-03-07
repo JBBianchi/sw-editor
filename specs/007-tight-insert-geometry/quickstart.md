@@ -70,3 +70,35 @@ Expected: layout snapshots remain deterministic within 1 px per axis across repe
 3. Observe focus target after insertion.
 
 Expected: insertion is keyboard-operable, menu actions remain accessible, and focus lands on the inserted node within the feature time budget.
+
+## Execution Report (2026-03-07 UTC)
+
+### Environment
+
+- Node.js `v24.14.0`
+- `pnpm` `10.30.3`
+- Playwright browsers installed with `pnpm exec playwright install --with-deps`
+
+### Baseline Command Results
+
+- `pnpm -r build`: PASS
+- `pnpm test`: PASS
+- `pnpm test:e2e`: FAIL (`45 failed`, `96 passed`, `123 skipped`)
+
+### Scenario Status
+
+| Scenario | Status | Evidence / Notes |
+|---|---|---|
+| 1. Midpoint Anchor On Blank Flow | FAIL | `tests/e2e/insert-layout-affordance.spec.ts` midpoint checks timed out waiting for required node/canvas geometry. |
+| 2. Midpoint Stability After Pan and Zoom | FAIL | `insert-layout-affordance.spec.ts` and `insert-layout-orientation.spec.ts` pan/zoom alignment checks failed across Chromium/Firefox/WebKit. |
+| 3. Stale Anchor Cleanup After Insertion | FAIL | `insert-layout-orientation.spec.ts` stale cleanup assertions failed (`edgeIdsBefore.length` was `0`). |
+| 4. Orientation and Port Binding (Top-To-Bottom) | FAIL | No passing validation evidence from this run; dedicated top-to-bottom port-binding assertions were not observed in executed coverage. |
+| 5. Orientation and Port Binding (Left-To-Right) | FAIL | No passing validation evidence from this run; dedicated left-to-right port-binding assertions were not observed in executed coverage. |
+| 6. Deterministic Repeat Layout | FAIL | No deterministic snapshot/coordinate-repeat assertions were observed in executed coverage. |
+| 7. Keyboard Insertion and Focus Landing | PASS | Keyboard insertion/accessibility scenario tests ran without failures in `tests/e2e/accessibility-insert-layout.spec.ts`. |
+
+### Deviations / Issues
+
+- Initial e2e run failed before test execution due missing Playwright browser binaries; resolved by installing browsers and OS deps with `pnpm exec playwright install --with-deps`.
+- Insert-geometry suites still fail consistently after environment fix.
+- Follow-up issue filed: [#424](https://github.com/JBBianchi/sw-editor/issues/424).
