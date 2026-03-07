@@ -100,6 +100,9 @@ class SwEditorElement extends HTMLElement {
   /** Monotonic revision counter for this editor instance. */
   #counter: RevisionCounter | null = null;
 
+  /** Unsubscribe function for the viewport-change listener. */
+  #unsubViewport: (() => void) | null = null;
+
   // --------------------------------------------------------------------------
   // Lifecycle
   // --------------------------------------------------------------------------
@@ -135,6 +138,12 @@ class SwEditorElement extends HTMLElement {
 
     this.#syncAffordances();
 
+    // Re-position affordances whenever the viewport is panned or zoomed so
+    // that buttons stay aligned with the underlying edge midpoints.
+    this.#unsubViewport = this.#adapter.onViewportChange(() => {
+      this.#syncAffordances();
+    });
+
     // Allow the "Create new workflow" button to reset this element's state via
     // a custom event rather than a direct method reference.
     this.addEventListener("sw:create", this.#handleCreate);
@@ -147,6 +156,8 @@ class SwEditorElement extends HTMLElement {
    */
   disconnectedCallback(): void {
     this.removeEventListener("sw:create", this.#handleCreate);
+    this.#unsubViewport?.();
+    this.#unsubViewport = null;
     this.#adapter?.dispose();
     this.#adapter = null;
     this.#graph = null;
@@ -438,7 +449,10 @@ class SwEditorElement extends HTMLElement {
     const result = parseWorkflowSource({ format: "yaml", content });
     if (!result.ok) return;
     const graph = projectWorkflowToGraph(result.workflow);
+    this.#graph = graph;
     this.#adapter.update(graph);
+    this.#syncAffordances();
+    this.#syncTaskNodes();
     this.dataset.nodeCount = String(graph.nodes.length);
   }
 }
