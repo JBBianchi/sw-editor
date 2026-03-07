@@ -111,7 +111,7 @@
 - [ ] T032 [P] Enable insertion accessibility e2e suites by removing skip markers and updating assertions in `tests/e2e/accessibility-insert-layout.spec.ts`
 - [ ] T033 [P] Extend geometry/orientation quickstart regression coverage in `tests/integration/quickstart-scenarios.spec.ts`
 - [ ] T034 Document quickstart execution results in `specs/007-tight-insert-geometry/quickstart-validation-results.md`
-- [ ] T035 Document final verification and performance summary in `specs/007-tight-insert-geometry/verification-summary.md`
+- [X] T035 Document final verification and performance summary in `specs/007-tight-insert-geometry/verification-summary.md`
 - [ ] T036 Update feature status and summary entry in `specs/README.md`
 
 ---
