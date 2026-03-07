@@ -180,17 +180,18 @@ export class InsertionUI {
     // Remove any stale affordance for this edge before creating a new one.
     this.detachFromEdge(edgeId);
 
-    const button = this.createAffordanceButton(edgeId);
-
-    // If a renderer adapter is available, query it for anchor positioning.
-    if (this.rendererAdapter?.getEdgeAnchor) {
-      const edgeAnchor = this.rendererAdapter.getEdgeAnchor(edgeId);
-      if (edgeAnchor) {
-        button.style.position = "absolute";
-        button.style.left = `${edgeAnchor.x}px`;
-        button.style.top = `${edgeAnchor.y}px`;
-      }
+    // A renderer adapter with a valid anchor position is required.
+    // If no adapter is available or the anchor is null, the insert control
+    // is not shown for this edge.
+    const edgeAnchor = this.rendererAdapter?.getEdgeAnchor?.(edgeId);
+    if (!edgeAnchor) {
+      return () => {};
     }
+
+    const button = this.createAffordanceButton(edgeId);
+    button.style.position = "absolute";
+    button.style.left = `${edgeAnchor.x}px`;
+    button.style.top = `${edgeAnchor.y}px`;
 
     anchor.appendChild(button);
     this.affordances.set(edgeId, button);
