@@ -656,9 +656,10 @@ export class ReactFlowAdapter implements RendererAdapter {
   /**
    * Set the flow direction of the graph layout.
    *
-   * Stores the requested orientation for future layout calculations.
-   * Currently the adapter uses a simple linear layout; full orientation
-   * support will be implemented when the layout engine is expanded.
+   * Switches the dagre layout between top-to-bottom and left-to-right
+   * orientations. If a graph is currently mounted, the layout is
+   * immediately recomputed and the cached layout snapshot is updated
+   * so that anchors remain valid after the orientation change.
    *
    * @param mode - The desired orientation mode.
    */
