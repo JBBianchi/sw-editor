@@ -164,6 +164,47 @@ export async function assertAffordanceWithinTolerance(
 }
 
 /**
+ * Collect all unique edge identifiers represented by visible insertion
+ * affordance buttons.
+ *
+ * @param page - The Playwright {@link Page} instance.
+ * @returns Ordered list of unique `data-edge-id` values.
+ */
+export async function getInsertionEdgeIds(page: Page): Promise<string[]> {
+  const buttons = page.locator(INSERT_BUTTON_SELECTOR);
+  const count = await buttons.count();
+  const ids: string[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const edgeId = await buttons.nth(i).getAttribute("data-edge-id");
+    if (edgeId && !ids.includes(edgeId)) {
+      ids.push(edgeId);
+    }
+  }
+
+  return ids;
+}
+
+/**
+ * Assert that every insertion affordance edge is within the given midpoint
+ * tolerance.
+ *
+ * @param page - The Playwright {@link Page} instance.
+ * @param tolerancePx - Maximum allowed pixel distance (default `6`).
+ */
+export async function assertAllAffordancesWithinTolerance(
+  page: Page,
+  tolerancePx = 6,
+): Promise<void> {
+  const edgeIds = await getInsertionEdgeIds(page);
+  expect(edgeIds.length, "At least one insertion affordance edge should exist").toBeGreaterThan(0);
+
+  for (const edgeId of edgeIds) {
+    await assertAffordanceWithinTolerance(page, edgeId, tolerancePx);
+  }
+}
+
+/**
  * Simulate a pan-then-zoom viewport transform on the editor canvas.
  *
  * Panning is performed via a mouse drag on the canvas center. Zooming is
