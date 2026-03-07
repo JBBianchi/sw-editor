@@ -279,9 +279,7 @@ export async function waitForLayoutSettled(page: Page, timeout = 5_000): Promise
     return;
   }
 
-  const hasSignal = await editor.evaluate(
-    (el) => el.dataset.layoutGeneration !== undefined,
-  );
+  const hasSignal = await editor.evaluate((el) => el.dataset.layoutGeneration !== undefined);
 
   if (!hasSignal) {
     // Harness does not expose the settling signal; fall back.
@@ -324,7 +322,7 @@ export async function waitForAnchorStabilization(page: Page): Promise<void> {
   // If no affordances exist yet, wait for at least one to appear (up to 5 s).
   // This handles the gap between orientation-triggered DOM teardown and the
   // renderer rebuilding affordance buttons.
-  let count = await buttons.count();
+  const count = await buttons.count();
   if (count === 0) {
     try {
       await buttons.first().waitFor({ state: "attached", timeout: 5_000 });
