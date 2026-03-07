@@ -12,7 +12,7 @@ This repository now uses GitHub Spec Kit feature packages under `specs/`.
 | [`004-extensibility-customization`](004-extensibility-customization/) | Planned | Plugin architecture for custom rendering, validation, commands, and slot-based UI extensions. |
 | [`005-align-example-demo`](005-align-example-demo/) | Implemented | Consolidate `demo/` into `example/e2e-harness/` with package `@sw-editor/example-e2e-harness` under the unified `example/` top-level directory. |
 | [`006-fix-insert-layout`](006-fix-insert-layout/) | Draft | Correct insertion affordance placement on edges and keep newly inserted nodes visually positioned between their intended neighbors. |
-| [`007-tight-insert-geometry`](007-tight-insert-geometry/) | Draft | Define strict, measurable geometry contracts for edge-centered insertion controls, stable pan/zoom alignment, and orientation-aware deterministic layout with port-side rules. |
+| [`007-tight-insert-geometry`](007-tight-insert-geometry/) | Complete | Define strict, measurable geometry contracts for edge-centered insertion controls, stable pan/zoom alignment, and orientation-aware deterministic layout with port-side rules. |
 
 Each feature package contains:
 
