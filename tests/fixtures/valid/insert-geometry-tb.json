@@ -1,0 +1,100 @@
+{
+  "document": {
+    "dsl": "1.0.0",
+    "namespace": "fixtures",
+    "name": "insert-geometry-top-to-bottom",
+    "version": "1.0.0"
+  },
+  "do": [
+    {
+      "validateInput": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/validate"
+        }
+      }
+    },
+    {
+      "classifyRequest": {
+        "fork": {
+          "compete": false,
+          "branches": [
+            {
+              "handleUrgent": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/urgent"
+                }
+              }
+            },
+            {
+              "handleNormal": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/normal"
+                }
+              }
+            },
+            {
+              "handleLowPriority": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/low-priority"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "aggregateResults": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/aggregate"
+        }
+      }
+    },
+    {
+      "notifyStakeholders": {
+        "fork": {
+          "compete": false,
+          "branches": [
+            {
+              "notifyEmail": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/notify/email"
+                }
+              }
+            },
+            {
+              "notifySlack": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/notify/slack"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "finalizeReport": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/finalize"
+        }
+      }
+    }
+  ]
+}

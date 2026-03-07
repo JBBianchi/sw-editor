@@ -1,0 +1,109 @@
+{
+  "document": {
+    "dsl": "1.0.0",
+    "namespace": "fixtures",
+    "name": "insert-geometry-left-to-right",
+    "version": "1.0.0"
+  },
+  "do": [
+    {
+      "receiveOrder": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/orders/receive"
+        }
+      }
+    },
+    {
+      "enrichOrder": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/orders/enrich"
+        }
+      }
+    },
+    {
+      "routeOrder": {
+        "fork": {
+          "compete": false,
+          "branches": [
+            {
+              "domesticShipping": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/shipping/domestic"
+                }
+              }
+            },
+            {
+              "internationalShipping": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/shipping/international"
+                }
+              }
+            },
+            {
+              "expressShipping": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/shipping/express"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "processPayment": {
+        "fork": {
+          "compete": false,
+          "branches": [
+            {
+              "creditCard": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/payment/credit-card"
+                }
+              }
+            },
+            {
+              "bankTransfer": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/payment/bank-transfer"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "confirmOrder": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/orders/confirm"
+        }
+      }
+    },
+    {
+      "sendReceipt": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/orders/receipt"
+        }
+      }
+    }
+  ]
+}
