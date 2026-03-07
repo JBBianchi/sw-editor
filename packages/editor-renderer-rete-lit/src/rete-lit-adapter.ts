@@ -411,6 +411,17 @@ export class ReteLitAdapter implements RendererAdapter {
   /** The currently registered viewport-change callback, if any. */
   private viewportChangeCallback: (() => void) | undefined;
 
+  /**
+   * Whether cached insertion anchors need recomputation.
+   *
+   * Set to `true` on viewport change; cleared when {@link getInsertionAnchors}
+   * recomputes the anchors.
+   */
+  private anchorsDirty = false;
+
+  /** Cached insertion anchors from the last {@link getInsertionAnchors} call. */
+  private cachedInsertionAnchors: EdgeInsertionAnchor[] = [];
+
   constructor() {
     this.bridge = new ReteLitEventBridge();
     this.events = this.bridge;
@@ -460,7 +471,11 @@ export class ReteLitAdapter implements RendererAdapter {
 
     // Listen for viewport changes (pan/zoom) to invalidate cached anchors.
     area.addPipe((context) => {
-      if (context.type === "translated" || context.type === "zoomed") {
+      if (
+        context.type === "translated" ||
+        context.type === "zoomed" ||
+        context.type === "resized"
+      ) {
         this.anchorsDirty = true;
         this.viewportChangeCallback?.();
       }
@@ -489,6 +504,8 @@ export class ReteLitAdapter implements RendererAdapter {
       throw new Error("ReteLitAdapter: update() called before mount().");
     }
     this.lastGraph = graph;
+    this.anchorsDirty = true;
+    this.cachedInsertionAnchors = [];
     void this.applyGraph(graph);
   }
 
@@ -675,7 +692,11 @@ export class ReteLitAdapter implements RendererAdapter {
       return [];
     }
 
-    return this.lastGraph.edges.flatMap((e) => {
+    if (!this.anchorsDirty && this.cachedInsertionAnchors.length > 0) {
+      return this.cachedInsertionAnchors;
+    }
+
+    this.cachedInsertionAnchors = this.lastGraph.edges.flatMap((e) => {
       const svgAnchor = this.getAnchorFromRenderedPath(e.id);
       if (svgAnchor !== null) {
         return [svgAnchor];
@@ -687,6 +708,9 @@ export class ReteLitAdapter implements RendererAdapter {
       const mid = pathMidpoint(edgeFrame.path);
       return [{ edgeId: e.id, x: mid.x, y: mid.y }];
     });
+    this.anchorsDirty = false;
+
+    return this.cachedInsertionAnchors;
   }
 
   /**
@@ -735,10 +759,12 @@ export class ReteLitAdapter implements RendererAdapter {
     this.applyGeneration += 1;
     this.mounted.area.destroy();
     this.bridge.offSelectionChange();
+    this.viewportChangeCallback = undefined;
     this.reteNodeToGraphId.clear();
     this.reteConnToGraphId.clear();
     this.graphIdToReteNode.clear();
     this.graphIdToReteConn.clear();
+    this.cachedInsertionAnchors = [];
     this.lastGraph = null;
     this.cachedLayout = { nodes: [], edges: [] };
     this.mounted = null;
