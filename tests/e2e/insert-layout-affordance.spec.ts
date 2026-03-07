@@ -3,7 +3,7 @@
  *
  * Verifies that the `+` insertion button is:
  *
- * - Visually positioned at the edge midpoint (within 12px tolerance).
+ * - Visually positioned at the edge midpoint (within 6px tolerance).
  * - Correctly repositioned after pan/zoom viewport transformations.
  * - Keyboard-operable (Tab to focus, Enter/Space to activate).
  *
@@ -42,7 +42,7 @@ const CANVAS_SELECTOR = '[data-testid="editor-canvas"], .react-flow__viewport, .
  * Maximum allowed pixel distance between the insertion affordance center and
  * the geometric edge midpoint, as defined in SC-002 of the feature spec.
  */
-const MIDPOINT_TOLERANCE_PX = 12;
+const MIDPOINT_TOLERANCE_PX = 6;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -152,14 +152,13 @@ function distance(a: { x: number; y: number }, b: { x: number; y: number }): num
 // 1. Midpoint positioning
 // ---------------------------------------------------------------------------
 
-test.describe
-  .fixme("Insertion affordance — midpoint positioning (US2, SC-002)", () => {
+test.describe("Insertion affordance — midpoint positioning (US2, SC-002)", () => {
     test.beforeEach(async ({ page }) => {
       await openEditor(page);
       await createNewWorkflow(page);
     });
 
-    test("'+' button is positioned within 12px of the edge midpoint", async ({ page }) => {
+    test("'+' button is positioned within 6px of the edge midpoint", async ({ page }) => {
       const affordanceCenter = await getAffordanceCenter(page);
       const midpoint = await getEdgeMidpoint(page);
 
@@ -172,7 +171,7 @@ test.describe
       ).toBeLessThanOrEqual(MIDPOINT_TOLERANCE_PX);
     });
 
-    test("all insertion affordances are within 12px of their edge midpoints", async ({ page }) => {
+    test("all insertion affordances are within 6px of their edge midpoints", async ({ page }) => {
       const affordances = page.locator(INSERTION_BUTTON_SELECTOR);
       const count = await affordances.count();
       expect(count, "At least one insertion affordance should exist").toBeGreaterThan(0);
@@ -197,14 +196,13 @@ test.describe
 // 2. Position stability after pan/zoom
 // ---------------------------------------------------------------------------
 
-test.describe
-  .fixme("Insertion affordance — position after pan/zoom (US2)", () => {
+test.describe("Insertion affordance — position after pan/zoom (US2)", () => {
     test.beforeEach(async ({ page }) => {
       await openEditor(page);
       await createNewWorkflow(page);
     });
 
-    test("affordance remains within 12px of edge midpoint after pan", async ({ page }) => {
+    test("affordance remains within 6px of edge midpoint after pan", async ({ page }) => {
       // Record the initial relative offset between affordance and midpoint.
       const initialAffordance = await getAffordanceCenter(page);
       const initialMidpoint = await getEdgeMidpoint(page);
@@ -240,7 +238,7 @@ test.describe
       ).toBeLessThanOrEqual(MIDPOINT_TOLERANCE_PX);
     });
 
-    test("affordance remains within 12px of edge midpoint after zoom", async ({ page }) => {
+    test("affordance remains within 6px of edge midpoint after zoom", async ({ page }) => {
       // Zoom in using Ctrl+wheel on the canvas.
       const canvas = page.locator(CANVAS_SELECTOR).first();
       const canvasBox = await canvas.boundingBox();
@@ -266,7 +264,7 @@ test.describe
       ).toBeLessThanOrEqual(MIDPOINT_TOLERANCE_PX);
     });
 
-    test("affordance remains within 12px of edge midpoint after pan and zoom combined", async ({
+    test("affordance remains within 6px of edge midpoint after pan and zoom combined", async ({
       page,
     }) => {
       const canvas = page.locator(CANVAS_SELECTOR).first();
@@ -305,8 +303,7 @@ test.describe
 // 3. Keyboard operability
 // ---------------------------------------------------------------------------
 
-test.describe
-  .fixme("Insertion affordance — keyboard operability (US2)", () => {
+test.describe("Insertion affordance — keyboard operability (US2)", () => {
     test.beforeEach(async ({ page }) => {
       await openEditor(page);
       await createNewWorkflow(page);
