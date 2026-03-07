@@ -458,6 +458,9 @@ async function assertPortSidesMatchOrientation(page: Page, mode: OrientationMode
 // Tests
 // ---------------------------------------------------------------------------
 
+/** Task type selection menu opened by an insertion affordance. */
+const TASK_MENU_SELECTOR = '[role="menu"][aria-label="Select task type to insert"]';
+
 for (const renderer of RENDERERS) {
   test.describe(`Orientation switch [${renderer.name}]`, () => {
     test.beforeEach(async ({ page }) => {
@@ -481,6 +484,77 @@ for (const renderer of RENDERERS) {
       await assertDirectionMatchesOrientation(page, "top-to-bottom");
       await assertAllAffordancesAligned(page);
       await assertPortSidesMatchOrientation(page, "top-to-bottom");
+    });
+  });
+
+  test.describe(`data-edge-id contract [${renderer.name}]`, () => {
+    test.beforeEach(async ({ page }) => {
+      await openEditor(page, renderer.urlSuffix);
+      await createNewWorkflow(page);
+      await waitForAnchorStabilization(page);
+    });
+
+    test("every affordance button has a non-empty data-edge-id attribute", async ({ page }) => {
+      const buttons = page.locator(INSERT_BUTTON_SELECTOR);
+      const count = await buttons.count();
+      expect(count, "At least one insertion affordance must be present").toBeGreaterThan(0);
+
+      for (let i = 0; i < count; i++) {
+        const edgeId = await buttons.nth(i).getAttribute("data-edge-id");
+        expect(edgeId, `Affordance button ${i} must carry data-edge-id`).toBeTruthy();
+        expect((edgeId as string).length).toBeGreaterThan(0);
+      }
+    });
+
+    test("data-edge-id values survive an orientation switch", async ({ page }) => {
+      await setOrientation(page, "left-to-right");
+
+      const buttons = page.locator(INSERT_BUTTON_SELECTOR);
+      const count = await buttons.count();
+      expect(count).toBeGreaterThan(0);
+
+      for (let i = 0; i < count; i++) {
+        const edgeId = await buttons.nth(i).getAttribute("data-edge-id");
+        expect(edgeId, `Affordance button ${i} must retain data-edge-id after orientation switch`).toBeTruthy();
+      }
+    });
+  });
+
+  test.describe(`Escape focus-return [${renderer.name}]`, () => {
+    test.beforeEach(async ({ page }) => {
+      await openEditor(page, renderer.urlSuffix);
+      await createNewWorkflow(page);
+      await waitForAnchorStabilization(page);
+    });
+
+    test("Escape closes the menu and returns focus to the invoking affordance", async ({ page }) => {
+      const affordance = page.locator(INSERT_BUTTON_SELECTOR).first();
+      await affordance.focus();
+      await affordance.press("Enter");
+
+      const menu = page.locator(TASK_MENU_SELECTOR);
+      await expect(menu).toBeVisible();
+
+      await page.keyboard.press("Escape");
+
+      await expect(menu).not.toBeVisible();
+      await expect(affordance).toBeFocused();
+    });
+
+    test("Escape focus-return works after an orientation switch", async ({ page }) => {
+      await setOrientation(page, "left-to-right");
+
+      const affordance = page.locator(INSERT_BUTTON_SELECTOR).first();
+      await affordance.focus();
+      await affordance.press("Enter");
+
+      const menu = page.locator(TASK_MENU_SELECTOR);
+      await expect(menu).toBeVisible();
+
+      await page.keyboard.press("Escape");
+
+      await expect(menu).not.toBeVisible();
+      await expect(affordance).toBeFocused();
     });
   });
 }
