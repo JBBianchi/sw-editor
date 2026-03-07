@@ -192,7 +192,11 @@ function pathMidpoint(path: Point[]): Point {
  * @param position - The pre-computed layout position for this node.
  * @returns A React Flow node object suitable for passing to `<ReactFlow>`.
  */
-function toRFNode(node: RendererGraphNode, position: { x: number; y: number }): RFNode {
+function toRFNode(
+  node: RendererGraphNode,
+  position: { x: number; y: number },
+  orientation: OrientationMode,
+): RFNode {
   return {
     id: node.id,
     type: node.kind,
@@ -200,6 +204,7 @@ function toRFNode(node: RendererGraphNode, position: { x: number; y: number }): 
     data: {
       ...node.data,
       kind: node.kind,
+      orientation,
       ...(node.taskReference !== undefined ? { taskReference: node.taskReference } : {}),
     },
   };
@@ -254,7 +259,9 @@ function toRFGraph(
   }
 
   return {
-    nodes: graph.nodes.map((n) => toRFNode(n, positionMap.get(n.id) ?? { x: 0, y: 0 })),
+    nodes: graph.nodes.map((n) =>
+      toRFNode(n, positionMap.get(n.id) ?? { x: 0, y: 0 }, orientation),
+    ),
     edges: graph.edges.map((e) => toRFEdge(e)),
     layout,
   };
