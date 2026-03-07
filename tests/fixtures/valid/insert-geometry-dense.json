@@ -1,0 +1,280 @@
+{
+  "document": {
+    "dsl": "1.0.0",
+    "namespace": "fixtures",
+    "name": "insert-geometry-dense-graph",
+    "version": "1.0.0"
+  },
+  "do": [
+    {
+      "ingest": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/ingest"
+        }
+      }
+    },
+    {
+      "validate": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/validate"
+        }
+      }
+    },
+    {
+      "enrichPhase": {
+        "fork": {
+          "compete": false,
+          "branches": [
+            {
+              "enrichGeo": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/enrich/geo"
+                }
+              }
+            },
+            {
+              "enrichDemographics": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/enrich/demographics"
+                }
+              }
+            },
+            {
+              "enrichRisk": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/enrich/risk"
+                }
+              }
+            },
+            {
+              "enrichCompliance": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/enrich/compliance"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "mergeEnrichment": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/merge"
+        }
+      }
+    },
+    {
+      "scorePhase": {
+        "fork": {
+          "compete": false,
+          "branches": [
+            {
+              "scoreFraud": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/score/fraud"
+                }
+              }
+            },
+            {
+              "scoreCredit": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/score/credit"
+                }
+              }
+            },
+            {
+              "scoreIdentity": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/score/identity"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "aggregateScores": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/aggregate-scores"
+        }
+      }
+    },
+    {
+      "decisionPhase": {
+        "fork": {
+          "compete": false,
+          "branches": [
+            {
+              "autoApprove": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/decision/auto-approve"
+                }
+              }
+            },
+            {
+              "manualReview": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/decision/manual-review"
+                }
+              }
+            },
+            {
+              "escalate": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/decision/escalate"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "recordDecision": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/record-decision"
+        }
+      }
+    },
+    {
+      "notifyPhase": {
+        "fork": {
+          "compete": false,
+          "branches": [
+            {
+              "notifyApplicant": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/notify/applicant"
+                }
+              }
+            },
+            {
+              "notifyUnderwriter": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/notify/underwriter"
+                }
+              }
+            },
+            {
+              "notifyCompliance": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/notify/compliance"
+                }
+              }
+            },
+            {
+              "notifyAudit": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/notify/audit"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "archiveCase": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/archive"
+        }
+      }
+    },
+    {
+      "generateReport": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/report"
+        }
+      }
+    },
+    {
+      "cleanupPhase": {
+        "fork": {
+          "compete": false,
+          "branches": [
+            {
+              "purgeTemp": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/cleanup/temp"
+                }
+              }
+            },
+            {
+              "updateMetrics": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/cleanup/metrics"
+                }
+              }
+            },
+            {
+              "rotateKeys": {
+                "call": "http",
+                "with": {
+                  "method": "post",
+                  "endpoint": "https://api.example.com/cleanup/rotate-keys"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "finalAudit": {
+        "call": "http",
+        "with": {
+          "method": "post",
+          "endpoint": "https://api.example.com/final-audit"
+        }
+      }
+    }
+  ]
+}
