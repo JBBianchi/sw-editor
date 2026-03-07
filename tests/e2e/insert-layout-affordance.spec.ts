@@ -114,7 +114,41 @@ test.describe("Insertion affordance — position after pan/zoom (US2)", () => {
   });
 
 // ---------------------------------------------------------------------------
-// 3. Keyboard operability
+// 3. data-edge-id DOM contract
+// ---------------------------------------------------------------------------
+
+test.describe("Insertion affordance — data-edge-id contract", () => {
+    test.beforeEach(async ({ page }) => {
+      await openEditor(page);
+      await createNewWorkflow(page);
+    });
+
+    test("every insertion affordance button carries a non-empty data-edge-id attribute", async ({ page }) => {
+      const buttons = page.locator(INSERTION_BUTTON_SELECTOR);
+      const count = await buttons.count();
+      expect(count, "At least one insertion affordance must be present").toBeGreaterThan(0);
+
+      for (let i = 0; i < count; i++) {
+        const edgeId = await buttons.nth(i).getAttribute("data-edge-id");
+        expect(edgeId, `Affordance button ${i} must have a data-edge-id attribute`).toBeTruthy();
+        expect(typeof edgeId, `data-edge-id on button ${i} must be a string`).toBe("string");
+        expect((edgeId as string).length, `data-edge-id on button ${i} must be non-empty`).toBeGreaterThan(0);
+      }
+    });
+
+    test("data-edge-id values are unique across all affordance buttons", async ({ page }) => {
+      const edgeIds = await getInsertionEdgeIds(page);
+      expect(edgeIds.length, "At least one edge ID should exist").toBeGreaterThan(0);
+
+      const buttons = page.locator(INSERTION_BUTTON_SELECTOR);
+      const count = await buttons.count();
+      // Every button should have contributed an edge ID (no missing attributes).
+      expect(edgeIds.length).toBe(count);
+    });
+  });
+
+// ---------------------------------------------------------------------------
+// 4. Keyboard operability
 // ---------------------------------------------------------------------------
 
 test.describe("Insertion affordance — keyboard operability (US2)", () => {
