@@ -1,0 +1,6 @@
+tests/e2e/insert-layout-affordance.spec.ts	chromium	2026-03-07T15:24:11Z	2026-03-07T15:24:59Z	1
+tests/e2e/insert-layout-affordance.spec.ts	firefox	2026-03-07T15:24:59Z	2026-03-07T15:25:53Z	1
+tests/e2e/insert-layout-affordance.spec.ts	webkit	2026-03-07T15:25:53Z	2026-03-07T15:26:43Z	1
+tests/e2e/insert-layout-orientation.spec.ts	chromium	2026-03-07T15:26:43Z	2026-03-07T15:27:23Z	1
+tests/e2e/insert-layout-orientation.spec.ts	firefox	2026-03-07T15:27:23Z	2026-03-07T15:28:04Z	1
+tests/e2e/insert-layout-orientation.spec.ts	webkit	2026-03-07T15:28:04Z	2026-03-07T15:28:43Z	1

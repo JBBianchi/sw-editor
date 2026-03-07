@@ -102,3 +102,8 @@ Expected: insertion is keyboard-operable, menu actions remain accessible, and fo
 - Initial e2e run failed before test execution due missing Playwright browser binaries; resolved by installing browsers and OS deps with `pnpm exec playwright install --with-deps`.
 - Insert-geometry suites still fail consistently after environment fix.
 - Follow-up issue filed: [#424](https://github.com/JBBianchi/sw-editor/issues/424).
+
+### Task #430 Baseline Artifact
+
+- Detailed per-browser baseline for the targeted suites: [baseline-insert-geometry-e2e-2026-03-07.md](./baseline-insert-geometry-e2e-2026-03-07.md)
+- Timestamp metadata for all runs: `artifacts/task-430-baseline/run-metadata.tsv`
