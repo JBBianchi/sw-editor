@@ -34,7 +34,27 @@ import {
   serializeWorkflow,
   validateWorkflow,
 } from "@sw-editor/editor-core";
+import {
+  computeDeterministicLayout,
+  type DeterministicLayoutOptions,
+  type LayoutInputEdge,
+  type LayoutInputNode,
+  type LayoutSnapshot,
+} from "@sw-editor/editor-renderer-contract";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  assertDeterministicLayout,
+  assertMidpointWithinTolerance,
+  assertNoOverlap,
+  assertPortSideCorrect,
+  type EdgePath,
+  type LayoutSnapshot as GeometryLayoutSnapshot,
+  type NodeFrame,
+  type NodeWithPorts,
+  type Point,
+  type PortSide,
+} from "./geometry-assertions.helpers.js";
+import { loadFixtureGraph } from "./insertion-layout.helpers.js";
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -648,5 +668,281 @@ describe("Quickstart Scenario 6 — Load, Insert, Verify Visual Order", () => {
     const exported = serializeWorkflow(parsed.workflow, "yaml");
     const reparsed = parseWorkflowSource(exported);
     expect(reparsed.ok).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 007 Scenario Coverage: Tight Insert Geometry
+// ---------------------------------------------------------------------------
+
+const MIDPOINT_TOLERANCE_PX = 6;
+const MAX_LAYOUT_P95_MS = 150;
+const DENSE_LAYOUT_RUNS = 20;
+
+const TB_OPTIONS: DeterministicLayoutOptions = { orientation: "top-to-bottom" };
+const LR_OPTIONS: DeterministicLayoutOptions = { orientation: "left-to-right" };
+const ORIENTATIONS: DeterministicLayoutOptions[] = [TB_OPTIONS, LR_OPTIONS];
+
+const GEOMETRY_FIXTURES = [
+  "insert-geometry-tb.json",
+  "insert-geometry-lr.json",
+  "insert-geometry-dense.json",
+] as const;
+
+function toLayoutInputs(fixtureName: string): { nodes: LayoutInputNode[]; edges: LayoutInputEdge[] } {
+  const graph = loadFixtureGraph(fixtureName);
+  const nodes: LayoutInputNode[] = graph.nodes.map((node) => ({ id: node.id }));
+  const edges: LayoutInputEdge[] = graph.edges.map((edge) => ({
+    id: edge.id,
+    source: edge.source,
+    target: edge.target,
+  }));
+  return { nodes, edges };
+}
+
+function graphToLayoutInputs(graph: { nodes: { id: string }[]; edges: LayoutInputEdge[] }): {
+  nodes: LayoutInputNode[];
+  edges: LayoutInputEdge[];
+} {
+  const nodes: LayoutInputNode[] = graph.nodes.map((node) => ({ id: node.id }));
+  return { nodes, edges: graph.edges };
+}
+
+function midpoint(path: EdgePath): Point {
+  if (path.length < 2) {
+    throw new Error("midpoint: edge path must contain at least two points.");
+  }
+
+  const segmentLengths: number[] = [];
+  let totalLength = 0;
+  for (let i = 1; i < path.length; i++) {
+    const dx = path[i].x - path[i - 1].x;
+    const dy = path[i].y - path[i - 1].y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    segmentLengths.push(len);
+    totalLength += len;
+  }
+
+  const half = totalLength / 2;
+  let traversed = 0;
+  for (let i = 0; i < segmentLengths.length; i++) {
+    const segLen = segmentLengths[i];
+    if (traversed + segLen >= half) {
+      const t = segLen === 0 ? 0 : (half - traversed) / segLen;
+      return {
+        x: path[i].x + t * (path[i + 1].x - path[i].x),
+        y: path[i].y + t * (path[i + 1].y - path[i].y),
+      };
+    }
+    traversed += segLen;
+  }
+
+  return path[path.length - 1];
+}
+
+function classifyPortSide(
+  point: { x: number; y: number },
+  frame: { x: number; y: number; width: number; height: number },
+): PortSide {
+  const cx = frame.x + frame.width / 2;
+  const cy = frame.y + frame.height / 2;
+  const dx = point.x - cx;
+  const dy = point.y - cy;
+
+  if (Math.abs(dy) >= Math.abs(dx)) {
+    return dy >= 0 ? "bottom" : "top";
+  }
+  return dx >= 0 ? "right" : "left";
+}
+
+function deriveNodesWithPorts(snapshot: LayoutSnapshot): Map<string, NodeWithPorts> {
+  const nodeMap = new Map(snapshot.nodes.map((n) => [n.id, n]));
+  const result = new Map<string, NodeWithPorts>();
+
+  for (const node of snapshot.nodes) {
+    result.set(node.id, {
+      frame: { id: node.id, x: node.x, y: node.y, width: node.width, height: node.height },
+      ports: [],
+    });
+  }
+
+  for (const edge of snapshot.edges) {
+    const sourceFrame = nodeMap.get(edge.sourceId)!;
+    const targetFrame = nodeMap.get(edge.targetId)!;
+    const start = edge.path[0];
+    const end = edge.path[edge.path.length - 1];
+
+    result.get(edge.sourceId)?.ports.push({
+      position: start,
+      side: classifyPortSide(start, sourceFrame),
+      role: "output",
+    });
+    result.get(edge.targetId)?.ports.push({
+      position: end,
+      side: classifyPortSide(end, targetFrame),
+      role: "input",
+    });
+  }
+
+  return result;
+}
+
+function toNodeFrames(snapshot: LayoutSnapshot): NodeFrame[] {
+  return snapshot.nodes.map((node) => ({
+    id: node.id,
+    x: node.x,
+    y: node.y,
+    width: node.width,
+    height: node.height,
+  }));
+}
+
+function toGeometrySnapshot(snapshot: LayoutSnapshot): GeometryLayoutSnapshot {
+  const result: GeometryLayoutSnapshot = new Map();
+  for (const node of snapshot.nodes) {
+    result.set(node.id, { x: node.x + node.width / 2, y: node.y + node.height / 2 });
+  }
+  return result;
+}
+
+function p95(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.max(0, Math.ceil(sorted.length * 0.95) - 1);
+  return sorted[index] ?? 0;
+}
+
+function assertGraphIntegrity(graph: {
+  nodes: { id: string }[];
+  edges: { id: string; source: string; target: string }[];
+}): void {
+  const nodeIds = new Set(graph.nodes.map((node) => node.id));
+  const edgeIds = new Set<string>();
+
+  expect(nodeIds.size).toBe(graph.nodes.length);
+  for (const edge of graph.edges) {
+    expect(edgeIds.has(edge.id)).toBe(false);
+    edgeIds.add(edge.id);
+    expect(nodeIds.has(edge.source)).toBe(true);
+    expect(nodeIds.has(edge.target)).toBe(true);
+  }
+
+  const startId = graph.nodes.find((node) => node.id === START_NODE_ID)?.id;
+  const endId = graph.nodes.find((node) => node.id === END_NODE_ID)?.id;
+  expect(startId).toBeDefined();
+  expect(endId).toBeDefined();
+}
+
+describe("Quickstart Scenario Coverage — Tight Insert Geometry", () => {
+  it("load fixture -> insertion anchors are within 6px midpoint tolerance", () => {
+    for (const fixture of GEOMETRY_FIXTURES) {
+      const { nodes, edges } = toLayoutInputs(fixture);
+      for (const options of ORIENTATIONS) {
+        const snapshot = computeDeterministicLayout(nodes, edges, options);
+        expect(snapshot.edges.length).toBeGreaterThan(0);
+
+        const anchors = snapshot.edges.map((edge) => ({
+          edgeId: edge.id,
+          point: midpoint(edge.path as EdgePath),
+        }));
+
+        expect(new Set(anchors.map((anchor) => anchor.edgeId)).size).toBe(snapshot.edges.length);
+        for (const anchor of anchors) {
+          const edge = snapshot.edges.find((candidate) => candidate.id === anchor.edgeId);
+          expect(edge).toBeDefined();
+          assertMidpointWithinTolerance(anchor.point, edge!.path as EdgePath, MIDPOINT_TOLERANCE_PX);
+        }
+      }
+    }
+  });
+
+  it("switch orientation -> layout and port bindings update correctly", () => {
+    const { nodes, edges } = toLayoutInputs("insert-geometry-dense.json");
+    const topToBottom = computeDeterministicLayout(nodes, edges, TB_OPTIONS);
+    const leftToRight = computeDeterministicLayout(nodes, edges, LR_OPTIONS);
+
+    expect(topToBottom.nodes.length).toBe(leftToRight.nodes.length);
+    expect(topToBottom.edges.length).toBe(leftToRight.edges.length);
+
+    const tbStart = topToBottom.nodes.find((n) => n.id === START_NODE_ID);
+    const tbEnd = topToBottom.nodes.find((n) => n.id === END_NODE_ID);
+    const lrStart = leftToRight.nodes.find((n) => n.id === START_NODE_ID);
+    const lrEnd = leftToRight.nodes.find((n) => n.id === END_NODE_ID);
+    expect(tbStart).toBeDefined();
+    expect(tbEnd).toBeDefined();
+    expect(lrStart).toBeDefined();
+    expect(lrEnd).toBeDefined();
+    expect(tbStart!.y).toBeLessThan(tbEnd!.y);
+    expect(lrStart!.x).toBeLessThan(lrEnd!.x);
+
+    const tbPorts = deriveNodesWithPorts(topToBottom);
+    for (const [, node] of tbPorts) {
+      if (node.ports.length > 0) {
+        assertPortSideCorrect(node, "vertical");
+      }
+    }
+
+    const lrPorts = deriveNodesWithPorts(leftToRight);
+    for (const [, node] of lrPorts) {
+      if (node.ports.length > 0) {
+        assertPortSideCorrect(node, "horizontal");
+      }
+    }
+  });
+
+  it("insert node via affordance -> graph integrity is preserved and stale edge anchors disappear", () => {
+    const graph = bootstrapWorkflowGraph();
+    const edgeToSplit = graph.edges[0];
+    expect(edgeToSplit).toBeDefined();
+
+    const counter = new RevisionCounter();
+    const result = insertTask(graph, counter, {
+      edgeId: edgeToSplit!.id,
+      taskReference: "callStep",
+    });
+
+    expect(result.graph.nodes.length).toBe(graph.nodes.length + 1);
+    expect(result.graph.edges.length).toBe(graph.edges.length + 1);
+    expect(result.graph.edges.find((edge) => edge.id === edgeToSplit!.id)).toBeUndefined();
+    assertGraphIntegrity(result.graph);
+
+    const before = computeDeterministicLayout(
+      graphToLayoutInputs(graph).nodes,
+      graphToLayoutInputs(graph).edges,
+      TB_OPTIONS,
+    );
+    const after = computeDeterministicLayout(
+      graphToLayoutInputs(result.graph).nodes,
+      graphToLayoutInputs(result.graph).edges,
+      TB_OPTIONS,
+    );
+    expect(before.edges.some((edge) => edge.id === edgeToSplit!.id)).toBe(true);
+    expect(after.edges.some((edge) => edge.id === edgeToSplit!.id)).toBe(false);
+    expect(new Set(after.edges.map((edge) => edge.id)).size).toBe(after.edges.length);
+  });
+
+  it("dense graph -> no overlaps and layout p95 stays within performance budget", () => {
+    const { nodes, edges } = toLayoutInputs("insert-geometry-dense.json");
+
+    for (const options of ORIENTATIONS) {
+      const timings: number[] = [];
+      let baseline: GeometryLayoutSnapshot | null = null;
+
+      for (let run = 0; run < DENSE_LAYOUT_RUNS; run++) {
+        const started = Date.now();
+        const snapshot = computeDeterministicLayout(nodes, edges, options);
+        timings.push(Date.now() - started);
+
+        assertNoOverlap(toNodeFrames(snapshot));
+
+        const geometrySnapshot = toGeometrySnapshot(snapshot);
+        if (baseline === null) {
+          baseline = geometrySnapshot;
+        } else {
+          assertDeterministicLayout(baseline, geometrySnapshot, 1);
+        }
+      }
+
+      expect(p95(timings)).toBeLessThanOrEqual(MAX_LAYOUT_P95_MS);
+    }
   });
 });
