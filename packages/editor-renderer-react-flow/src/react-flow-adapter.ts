@@ -107,6 +107,7 @@ interface FlowController {
    * @param options - Optional zoom and duration settings.
    */
   setCenter(x: number, y: number, options?: { zoom?: number; duration?: number }): void;
+
 }
 
 /** Props for the internal {@link WorkflowFlowApp} component. */
@@ -186,19 +187,6 @@ function pathMidpoint(path: Point[]): Point {
 }
 
 /**
- * Escape a value for use inside a CSS attribute selector.
- *
- * @param value - Raw attribute value.
- * @returns Escaped selector-safe value.
- */
-function escapeAttrValue(value: string): string {
-  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
-    return CSS.escape(value);
-  }
-  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-}
-
-/**
  * Return a deep copy of a layout snapshot.
  *
  * @param snapshot - Snapshot to clone.
@@ -241,6 +229,8 @@ function samplePathInViewport(
     const sampleCount = Math.max(2, Math.min(25, Math.ceil(total / 48) + 1));
     const ownerSvg = pathEl.ownerSVGElement;
     const ctm = typeof pathEl.getScreenCTM === "function" ? pathEl.getScreenCTM() : null;
+    const localCtm = typeof pathEl.getCTM === "function" ? pathEl.getCTM() : null;
+    const pathRect = pathEl.getBoundingClientRect();
 
     const points: Point[] = [];
     for (let i = 0; i < sampleCount; i++) {
@@ -256,8 +246,18 @@ function samplePathInViewport(
           x: viewportPoint.x - containerRect.left,
           y: viewportPoint.y - containerRect.top,
         });
+      } else if (localCtm !== null && ownerSvg !== null) {
+        const ownerRect = ownerSvg.getBoundingClientRect();
+        points.push({
+          x: ownerRect.left + (localCtm.a * raw.x + localCtm.c * raw.y + localCtm.e) - containerRect.left,
+          y: ownerRect.top + (localCtm.b * raw.x + localCtm.d * raw.y + localCtm.f) - containerRect.top,
+        });
       } else {
-        points.push({ x: raw.x, y: raw.y });
+        const t = sampleCount === 1 ? 0 : i / (sampleCount - 1);
+        points.push({
+          x: pathRect.left - containerRect.left + pathRect.width * t,
+          y: pathRect.top - containerRect.top + pathRect.height * t,
+        });
       }
     }
 
@@ -572,6 +572,31 @@ export class ReactFlowAdapter implements RendererAdapter {
    * recomputes the layout.
    */
   private anchorsDirty = false;
+  private pendingAnchorRefresh = false;
+
+  /**
+   * Schedule an asynchronous anchor refresh callback after React Flow has had
+   * a chance to commit DOM updates.
+   */
+  private scheduleAnchorRefresh(): void {
+    if (this.pendingAnchorRefresh) {
+      return;
+    }
+    this.pendingAnchorRefresh = true;
+
+    const flush = (): void => {
+      this.pendingAnchorRefresh = false;
+      this.anchorsDirty = true;
+      this.viewportChangeCallback?.();
+    };
+
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => flush());
+      return;
+    }
+
+    setTimeout(flush, 0);
+  }
 
   /**
    * Attach the React Flow renderer to `container` and render the initial graph.
@@ -616,6 +641,7 @@ export class ReactFlowAdapter implements RendererAdapter {
         },
       }),
     );
+    this.scheduleAnchorRefresh();
   }
 
   /**
@@ -641,8 +667,9 @@ export class ReactFlowAdapter implements RendererAdapter {
     this.lastGraph = graph;
     const { nodes, edges, layout } = toRFGraph(graph, this.orientation);
     this.cachedLayout = layout;
-    this.anchorsDirty = false;
+    this.anchorsDirty = true;
     this.controller.updateGraph(nodes, edges);
+    this.scheduleAnchorRefresh();
   }
 
   /**
@@ -666,7 +693,9 @@ export class ReactFlowAdapter implements RendererAdapter {
       return null;
     }
 
-    const edgeFrame = this.cachedLayout.edges.find((e) => e.id === edgeId);
+    const snapshot = this.snapshotFromDom();
+    this.cachedLayout = snapshot;
+    const edgeFrame = snapshot.edges.find((e) => e.id === edgeId);
     if (!edgeFrame || edgeFrame.path.length < 2) {
       return null;
     }
@@ -734,10 +763,12 @@ export class ReactFlowAdapter implements RendererAdapter {
     if (this.anchorsDirty && this.lastGraph !== null) {
       const { layout } = toRFGraph(this.lastGraph, this.orientation);
       this.cachedLayout = layout;
-      this.anchorsDirty = false;
     }
+    const snapshot = this.snapshotFromDom();
+    this.cachedLayout = snapshot;
+    this.anchorsDirty = false;
 
-    return this.cachedLayout.edges.flatMap((edgeFrame) => {
+    return snapshot.edges.flatMap((edgeFrame) => {
       if (edgeFrame.path.length < 2) {
         return [];
       }
@@ -761,7 +792,9 @@ export class ReactFlowAdapter implements RendererAdapter {
     if (this.lastGraph !== null) {
       const { nodes, edges, layout } = toRFGraph(this.lastGraph, this.orientation);
       this.cachedLayout = layout;
+      this.anchorsDirty = true;
       this.controller?.updateGraph(nodes, edges);
+      this.scheduleAnchorRefresh();
     }
   }
 
@@ -799,6 +832,7 @@ export class ReactFlowAdapter implements RendererAdapter {
     this.disposed = true;
     this.events.offSelectionChange();
     this.viewportChangeCallback = undefined;
+    this.pendingAnchorRefresh = false;
     this.controller = null;
     this.container = null;
     this.lastGraph = null;
@@ -828,10 +862,32 @@ export class ReactFlowAdapter implements RendererAdapter {
     const cachedEdgeById = new Map(this.cachedLayout.edges.map((edge) => [edge.id, edge]));
     const nodeFrameById = new Map<string, LayoutSnapshot["nodes"][number]>();
     const containerRect = container.getBoundingClientRect();
+    const doc = container.ownerDocument;
+
+    const renderedNodesById = new Map<string, HTMLElement>();
+    for (const nodeEl of Array.from(doc.querySelectorAll<HTMLElement>(".react-flow__node[data-id]"))) {
+      const id = nodeEl.getAttribute("data-id");
+      if (id !== null) {
+        renderedNodesById.set(id, nodeEl);
+      }
+    }
+
+    const renderedEdgesById = new Map<string, SVGGElement>();
+    for (const edgeEl of Array.from(doc.querySelectorAll<SVGGElement>(".react-flow__edge"))) {
+      const dataId = edgeEl.getAttribute("data-id");
+      if (dataId !== null) {
+        renderedEdgesById.set(dataId, edgeEl);
+        continue;
+      }
+
+      const testId = edgeEl.getAttribute("data-testid");
+      if (testId !== null && testId.startsWith("rf__edge-")) {
+        renderedEdgesById.set(testId.slice("rf__edge-".length), edgeEl);
+      }
+    }
 
     const nodes = graph.nodes.map((graphNode) => {
-      const selector = `.react-flow__node[data-id="${escapeAttrValue(graphNode.id)}"]`;
-      const nodeEl = container.querySelector<HTMLElement>(selector);
+      const nodeEl = renderedNodesById.get(graphNode.id) ?? null;
       const fallback = cachedNodeById.get(graphNode.id) ?? {
         id: graphNode.id,
         x: 0,
@@ -856,8 +912,7 @@ export class ReactFlowAdapter implements RendererAdapter {
 
     const edges = graph.edges.map((graphEdge) => {
       const fallback = cachedEdgeById.get(graphEdge.id);
-      const selector = `.react-flow__edge[data-id="${escapeAttrValue(graphEdge.id)}"]`;
-      const edgeGroup = container.querySelector<SVGGElement>(selector);
+      const edgeGroup = renderedEdgesById.get(graphEdge.id) ?? null;
       const pathEl = edgeGroup?.querySelector<SVGPathElement>("path.react-flow__edge-path, path");
       const sampledPath =
         pathEl === undefined || pathEl === null ? null : samplePathInViewport(pathEl, containerRect);

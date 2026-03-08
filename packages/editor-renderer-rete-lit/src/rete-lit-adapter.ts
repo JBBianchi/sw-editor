@@ -24,6 +24,7 @@ import type {
   WorkflowGraph,
 } from "@sw-editor/editor-renderer-contract";
 import { computeDeterministicLayout } from "@sw-editor/editor-renderer-contract";
+import { html, type TemplateResult } from "lit";
 import type { GetSchemes } from "rete";
 import { ClassicPreset, NodeEditor } from "rete";
 import { AreaExtensions, AreaPlugin } from "rete-area-plugin";
@@ -359,6 +360,71 @@ function samplePathInViewport(
 }
 
 // ---------------------------------------------------------------------------
+// Custom node rendering (orientation-aware sockets)
+// ---------------------------------------------------------------------------
+
+/** Orientation modes used by the custom Rete node template. */
+type NodeRenderMode = "vertical" | "horizontal";
+
+/** Raw input descriptor shape exposed by the classic preset payload. */
+interface ReteNodeInputPayload {
+  label?: string;
+  socket?: unknown;
+  control?: unknown;
+  showControl?: boolean;
+  index?: number;
+}
+
+/** Raw output descriptor shape exposed by the classic preset payload. */
+interface ReteNodeOutputPayload {
+  label?: string;
+  socket?: unknown;
+  index?: number;
+}
+
+/** Raw control descriptor shape exposed by the classic preset payload. */
+interface ReteNodeControlPayload {
+  index?: number;
+}
+
+/** Node payload received by the Lit preset `customize.node` callback. */
+interface ReteNodePayload {
+  id: string;
+  label: string;
+  selected?: boolean;
+  width?: number;
+  height?: number;
+  inputs?: Record<string, ReteNodeInputPayload | undefined>;
+  outputs?: Record<string, ReteNodeOutputPayload | undefined>;
+  controls?: Record<string, ReteNodeControlPayload | undefined>;
+}
+
+/** Emit callback value forwarded to `rete-ref` elements. */
+type NodeRenderEmit = unknown;
+
+/**
+ * Sort keyed payload entries by optional `index` while keeping key/value pairs.
+ *
+ * @param entries - Object entries containing optional index metadata.
+ * @returns Entries sorted by ascending index.
+ */
+function sortByIndex<T extends { index?: number }>(
+  entries: Array<[string, T | undefined]>,
+): Array<[string, T | undefined]> {
+  return [...entries].sort((a, b) => (a[1]?.index ?? 0) - (b[1]?.index ?? 0));
+}
+
+/**
+ * Convert adapter orientation into node template orientation.
+ *
+ * @param orientation - Graph orientation mode.
+ * @returns `"vertical"` for top-to-bottom or `"horizontal"` for left-to-right.
+ */
+function toNodeRenderMode(orientation: OrientationMode): NodeRenderMode {
+  return orientation === "left-to-right" ? "horizontal" : "vertical";
+}
+
+// ---------------------------------------------------------------------------
 // Adapter
 // ---------------------------------------------------------------------------
 
@@ -489,6 +555,223 @@ export class ReteLitAdapter implements RendererAdapter {
   }
 
   /**
+   * Render an orientation-aware node template for the Rete Lit classic preset.
+   *
+   * Sockets remain real `rete-ref` socket refs so connection endpoints are
+   * computed from actual rendered socket positions.
+   *
+   * @param payload - Classic preset node payload.
+   * @param emit - Render event emitter provided by the preset.
+   * @returns Lit template for one node.
+   */
+  private renderNodeTemplate(payload: ReteNodePayload, emit: NodeRenderEmit): TemplateResult {
+    const mode = toNodeRenderMode(this.orientation);
+    const inputs = sortByIndex(Object.entries(payload.inputs ?? {})).filter(
+      (entry): entry is [string, ReteNodeInputPayload] => entry[1] !== undefined,
+    );
+    const outputs = sortByIndex(Object.entries(payload.outputs ?? {})).filter(
+      (entry): entry is [string, ReteNodeOutputPayload] => entry[1] !== undefined,
+    );
+    const controls = sortByIndex(Object.entries(payload.controls ?? {})).filter(
+      (entry): entry is [string, ReteNodeControlPayload] => entry[1] !== undefined,
+    );
+    const selectedClass = payload.selected ? "sw-rete-node--selected" : "";
+    const widthPx = Number.isFinite(payload.width) ? `${payload.width}px` : "180px";
+    const heightPx = Number.isFinite(payload.height) ? `${payload.height}px` : "auto";
+
+    const renderInputSockets = (): TemplateResult => html`
+      <div class="sw-rete-node__sockets sw-rete-node__sockets--inputs">
+        ${inputs.map(([key, input]) => {
+          const title = input.label ?? key;
+          return html`
+            <div class="sw-rete-node__socket sw-rete-node__socket--input" data-testid="input-${key}">
+              <span class="sw-rete-node__socket-ref" data-testid="input-socket">
+                <rete-ref
+                  .data=${{
+                    type: "socket",
+                    side: "input",
+                    key,
+                    nodeId: payload.id,
+                    payload: input.socket,
+                  }}
+                  .emit=${emit}
+                ></rete-ref>
+              </span>
+              <span class="sw-rete-node__socket-label" data-testid="input-title">${title}</span>
+            </div>
+          `;
+        })}
+      </div>
+    `;
+
+    const renderOutputSockets = (): TemplateResult => html`
+      <div class="sw-rete-node__sockets sw-rete-node__sockets--outputs">
+        ${outputs.map(([key, output]) => {
+          const title = output.label ?? key;
+          return html`
+            <div class="sw-rete-node__socket sw-rete-node__socket--output" data-testid="output-${key}">
+              <span class="sw-rete-node__socket-label" data-testid="output-title">${title}</span>
+              <span class="sw-rete-node__socket-ref" data-testid="output-socket">
+                <rete-ref
+                  .data=${{
+                    type: "socket",
+                    side: "output",
+                    key,
+                    nodeId: payload.id,
+                    payload: output.socket,
+                  }}
+                  .emit=${emit}
+                ></rete-ref>
+              </span>
+            </div>
+          `;
+        })}
+      </div>
+    `;
+
+    const renderControls = (): TemplateResult | null => {
+      if (controls.length === 0) {
+        return null;
+      }
+      return html`
+        <div class="sw-rete-node__controls">
+          ${controls.map(([key, control]) => html`
+            <span class="sw-rete-node__control" data-testid="control-${key}">
+              <rete-ref .data=${{ type: "control", payload: control }} .emit=${emit}></rete-ref>
+            </span>
+          `)}
+        </div>
+      `;
+    };
+
+    return html`
+      <style>
+        .sw-rete-node {
+          --sw-node-bg: #eef3ff;
+          --sw-node-bg-selected: #ffeaa7;
+          --sw-node-border: #4e58bf;
+          --sw-node-border-selected: #d6a700;
+          --sw-node-title: #1f2a56;
+          --sw-node-label: #26304f;
+          box-sizing: border-box;
+          border: 2px solid var(--sw-node-border);
+          border-radius: 10px;
+          background: var(--sw-node-bg);
+          color: var(--sw-node-label);
+          min-width: 120px;
+          padding: 8px;
+          width: ${widthPx};
+          height: ${heightPx};
+          user-select: none;
+          font-family: Arial, sans-serif;
+        }
+
+        .sw-rete-node--selected {
+          background: var(--sw-node-bg-selected);
+          border-color: var(--sw-node-border-selected);
+        }
+
+        .sw-rete-node__layout {
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          gap: 8px;
+        }
+
+        .sw-rete-node--horizontal .sw-rete-node__layout {
+          display: grid;
+          grid-template-columns: auto 1fr auto;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .sw-rete-node__title {
+          font-size: 14px;
+          font-weight: 700;
+          color: var(--sw-node-title);
+          text-align: center;
+          line-height: 1.2;
+          overflow-wrap: anywhere;
+        }
+
+        .sw-rete-node__sockets {
+          display: flex;
+          gap: 6px;
+        }
+
+        .sw-rete-node--vertical .sw-rete-node__sockets--inputs,
+        .sw-rete-node--vertical .sw-rete-node__sockets--outputs {
+          justify-content: center;
+        }
+
+        .sw-rete-node--horizontal .sw-rete-node__sockets--inputs,
+        .sw-rete-node--horizontal .sw-rete-node__sockets--outputs {
+          flex-direction: column;
+          justify-content: center;
+        }
+
+        .sw-rete-node--horizontal .sw-rete-node__sockets--inputs {
+          align-items: flex-start;
+        }
+
+        .sw-rete-node--horizontal .sw-rete-node__sockets--outputs {
+          align-items: flex-end;
+        }
+
+        .sw-rete-node--horizontal .sw-rete-node__sockets--inputs .sw-rete-node__socket,
+        .sw-rete-node--horizontal .sw-rete-node__sockets--outputs .sw-rete-node__socket {
+          min-height: 24px;
+        }
+
+        .sw-rete-node__socket {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 11px;
+          color: var(--sw-node-label);
+        }
+
+        .sw-rete-node--vertical .sw-rete-node__socket--output {
+          flex-direction: row;
+        }
+
+        .sw-rete-node--vertical .sw-rete-node__socket--input {
+          flex-direction: row;
+        }
+
+        .sw-rete-node--horizontal .sw-rete-node__socket--input {
+          flex-direction: row;
+        }
+
+        .sw-rete-node--horizontal .sw-rete-node__socket--output {
+          flex-direction: row;
+          justify-content: flex-end;
+        }
+
+        .sw-rete-node__controls {
+          display: flex;
+          justify-content: center;
+          gap: 6px;
+        }
+      </style>
+
+      <div
+        class="sw-rete-node sw-rete-node--${mode} ${selectedClass}"
+        data-testid="node"
+        data-node-id="${payload.id}"
+        data-orientation="${this.orientation}"
+      >
+        <div class="sw-rete-node__layout">
+          ${renderInputSockets()}
+          <div class="sw-rete-node__title" data-testid="title">${payload.label}</div>
+          ${renderOutputSockets()}
+        </div>
+        ${renderControls()}
+      </div>
+    `;
+  }
+
+  /**
    * Attach the renderer to `container` and render the initial `graph`.
    *
    * Creates the Rete `NodeEditor`, `AreaPlugin`, `LitPlugin`, and
@@ -512,7 +795,16 @@ export class ReteLitAdapter implements RendererAdapter {
     const render = new LitPlugin<Schemes, AreaExtra>();
     const connection = new ConnectionPlugin<Schemes, AreaExtra>();
 
-    render.addPreset(Presets.classic.setup());
+    render.addPreset(
+      Presets.classic.setup({
+        customize: {
+          node: (context: { payload: unknown }) => {
+            const payload = context.payload as ReteNodePayload;
+            return ({ emit }: { emit: NodeRenderEmit }) => this.renderNodeTemplate(payload, emit);
+          },
+        },
+      }),
+    );
     connection.addPreset(ConnectionPresets.classic.setup());
 
     editor.use(area);
@@ -978,10 +1270,17 @@ export class ReteLitAdapter implements RendererAdapter {
         const source = nodeFrameById.get(graphEdge.source);
         const target = nodeFrameById.get(graphEdge.target);
         if (source !== undefined && target !== undefined) {
-          path = [
-            { x: source.x + source.width / 2, y: source.y + source.height / 2 },
-            { x: target.x + target.width / 2, y: target.y + target.height / 2 },
-          ];
+          if (this.orientation === "left-to-right") {
+            path = [
+              { x: source.x + source.width, y: source.y + source.height / 2 },
+              { x: target.x, y: target.y + target.height / 2 },
+            ];
+          } else {
+            path = [
+              { x: source.x + source.width / 2, y: source.y + source.height },
+              { x: target.x + target.width / 2, y: target.y },
+            ];
+          }
         }
       }
 

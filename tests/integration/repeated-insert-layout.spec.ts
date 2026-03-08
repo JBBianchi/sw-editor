@@ -227,22 +227,85 @@ function assertPerAxisDeviation(
   }
 }
 
+function classifyPortSide(
+  point: { x: number; y: number },
+  frame: { x: number; y: number; width: number; height: number },
+): "top" | "right" | "bottom" | "left" {
+  const cx = frame.x + frame.width / 2;
+  const cy = frame.y + frame.height / 2;
+  const dx = point.x - cx;
+  const dy = point.y - cy;
+
+  if (Math.abs(dy) >= Math.abs(dx)) {
+    return dy >= 0 ? "bottom" : "top";
+  }
+  return dx >= 0 ? "right" : "left";
+}
+
+function assertEdgePortSidesMatchOrientation(
+  snapshot: LayoutSnapshot,
+  orientation: OrientationMode,
+): void {
+  const sourceExpected = orientation === "top-to-bottom" ? "bottom" : "right";
+  const targetExpected = orientation === "top-to-bottom" ? "top" : "left";
+  const frameById = new Map(snapshot.nodes.map((node) => [node.id, node]));
+
+  for (const edge of snapshot.edges) {
+    expect(edge.path.length, `edge "${edge.id}" should expose at least two path points`).toBeGreaterThanOrEqual(
+      2,
+    );
+
+    const sourceFrame = frameById.get(edge.sourceId);
+    const targetFrame = frameById.get(edge.targetId);
+    expect(sourceFrame, `missing source node frame "${edge.sourceId}"`).toBeDefined();
+    expect(targetFrame, `missing target node frame "${edge.targetId}"`).toBeDefined();
+    if (sourceFrame === undefined || targetFrame === undefined) {
+      continue;
+    }
+
+    const sourcePoint = edge.path[0] as { x: number; y: number };
+    const targetPoint = edge.path[edge.path.length - 1] as { x: number; y: number };
+    const sourceSide = classifyPortSide(sourcePoint, sourceFrame);
+    const targetSide = classifyPortSide(targetPoint, targetFrame);
+
+    expect(
+      sourceSide,
+      `edge "${edge.id}" source side mismatch in ${orientation} mode`,
+    ).toBe(sourceExpected);
+    expect(
+      targetSide,
+      `edge "${edge.id}" target side mismatch in ${orientation} mode`,
+    ).toBe(targetExpected);
+  }
+}
+
+async function waitForSnapshot(
+  adapter: RendererAdapter,
+  expectedNodeCount: number,
+  expectedEdgeCount: number,
+): Promise<LayoutSnapshot> {
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const snapshot = adapter.getLayoutSnapshot();
+    const hasExpectedCounts =
+      snapshot.nodes.length === expectedNodeCount && snapshot.edges.length === expectedEdgeCount;
+    const hasNodeFrames = snapshot.nodes.every((node) => node.width > 0 && node.height > 0);
+    const hasEdgePaths = snapshot.edges.every((edge) => edge.path.length >= 2);
+
+    if (hasExpectedCounts && hasNodeFrames && hasEdgePaths) {
+      return snapshot;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  return adapter.getLayoutSnapshot();
+}
+
 async function captureLayoutSnapshot(
   adapter: RendererAdapter,
   graph: WorkflowGraph,
 ): Promise<LayoutSnapshot> {
   const container = document.createElement("div");
   adapter.mount(container, structuredClone(graph));
-
-  for (let attempt = 0; attempt < 30; attempt++) {
-    const snapshot = adapter.getLayoutSnapshot();
-    if (snapshot.nodes.length === graph.nodes.length && snapshot.edges.length === graph.edges.length) {
-      return snapshot;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  }
-
-  return adapter.getLayoutSnapshot();
+  return waitForSnapshot(adapter, graph.nodes.length, graph.edges.length);
 }
 
 describe("repeated-insert-layout — snapshot determinism and no-overlap regressions", () => {
@@ -280,6 +343,30 @@ describe("repeated-insert-layout — snapshot determinism and no-overlap regress
               assertNoOverlap(toNodeFrames(snapshot));
               adapter.dispose();
             });
+
+            if (adapterDescriptor.name === "react-flow") {
+              it(`edge endpoints map to orientation-correct port sides for fixture "${fixture.label}"`, async () => {
+                const graph = loadFixtureGraph(fixture.name);
+                const adapter = adapterDescriptor.create();
+                adapter.setOrientation(orientation);
+                const snapshot = await captureLayoutSnapshot(adapter, graph);
+
+                assertEdgePortSidesMatchOrientation(snapshot, orientation);
+                adapter.dispose();
+              });
+            } else {
+              it(`rete snapshots expose non-degenerate edge paths for fixture "${fixture.label}"`, async () => {
+                const graph = loadFixtureGraph(fixture.name);
+                const adapter = adapterDescriptor.create();
+                adapter.setOrientation(orientation);
+                const snapshot = await captureLayoutSnapshot(adapter, graph);
+
+                for (const edge of snapshot.edges) {
+                  expect(edge.path.length, `edge "${edge.id}" should contain a path`).toBeGreaterThanOrEqual(2);
+                }
+                adapter.dispose();
+              });
+            }
           }
         });
       }
@@ -296,6 +383,7 @@ describe("repeated-insert-layout — snapshot determinism and no-overlap regress
           adapter.dispose();
         }
       });
+
     });
   }
 });

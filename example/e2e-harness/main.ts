@@ -220,6 +220,7 @@ class SwEditorElement extends HTMLElement {
     const button = document.createElement("button");
     button.type = "button";
     button.setAttribute("aria-label", "Insert task");
+    button.setAttribute("data-edge-id", edgeId);
     button.className = "sw-insertion-affordance";
     button.textContent = "+";
 

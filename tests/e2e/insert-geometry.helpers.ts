@@ -26,12 +26,11 @@ const INSERT_BUTTON_SELECTOR = 'button[aria-label="Insert task"]';
 /**
  * SVG edge element selector.
  *
- * React Flow uses `[data-testid="rf__edge-<id>"]` elements; Rete-Lit renders
- * SVG `<path>` elements inside `[data-connection-id]` containers. The helpers
- * fall through both patterns so they work regardless of the active renderer.
+ * React Flow exposes stable `rf__edge-*` IDs. Rete-Lit may expose
+ * `data-connection-id` or `connection-*` test IDs depending on plugin internals.
  */
 const svgEdgeById = (edgeId: string): string =>
-  `[data-testid="rf__edge-${edgeId}"], [data-connection-id="${edgeId}"]`;
+  `[data-testid="rf__edge-${edgeId}"], [data-connection-id="${edgeId}"], [data-testid="connection-${edgeId}"]`;
 
 /** Canvas / viewport container (covers both renderers). */
 const CANVAS_SELECTOR = '[data-testid="editor-canvas"], .react-flow__viewport, .react-flow, .rete';
@@ -102,19 +101,25 @@ export async function getEdgeMidpoint(page: Page, edgeId: string): Promise<Point
 
   // Try SVG path sampling first (React Flow renders edges as <path>).
   const midpoint = await edgeLocator.evaluate((el: Element): { x: number; y: number } | null => {
-    const path = el.tagName === "path" ? (el as SVGPathElement) : el.querySelector("path");
+    const path =
+      el.tagName === "path"
+        ? (el as SVGPathElement)
+        : (el.querySelector("path.react-flow__edge-path") ?? el.querySelector("path"));
     if (path && typeof path.getTotalLength === "function") {
       const totalLength = path.getTotalLength();
       const pt = path.getPointAtLength(totalLength / 2);
-      // Convert from SVG coordinate space to viewport via CTM.
-      const ctm = (path.ownerSVGElement ?? path).getScreenCTM();
-      if (ctm) {
-        return {
-          x: pt.x * ctm.a + ctm.e,
-          y: pt.y * ctm.d + ctm.f,
-        };
+      // Convert from SVG coordinates to viewport coordinates using full matrix transform.
+      const svg = path.ownerSVGElement;
+      const ctm = typeof path.getScreenCTM === "function" ? path.getScreenCTM() : null;
+      if (svg && ctm && typeof svg.createSVGPoint === "function") {
+        const svgPt = svg.createSVGPoint();
+        svgPt.x = pt.x;
+        svgPt.y = pt.y;
+        const viewportPt = svgPt.matrixTransform(ctm);
+        return { x: viewportPt.x, y: viewportPt.y };
       }
-      return { x: pt.x, y: pt.y };
+      const rect = path.getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
     }
     return null;
   });
@@ -264,6 +269,6 @@ export async function waitForAnchorStabilization(page: Page): Promise<void> {
     }
     previous = current;
   }
-  // Positions did not fully converge; proceed anyway — callers can detect
+  // Positions did not fully converge; proceed anyway - callers can detect
   // drift through their own tolerance assertions.
 }
