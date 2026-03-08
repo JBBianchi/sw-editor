@@ -321,6 +321,72 @@ describe("InsertionUI", () => {
 
       document.body.removeChild(anchor);
     });
+
+    it("Escape returns focus to the invoking affordance button", () => {
+      const { ui, container } = makeHarness();
+      const anchor = document.createElement("div");
+      document.body.appendChild(anchor);
+      ui.attachToEdge(INITIAL_EDGE_ID, anchor);
+
+      const affordance = anchor.querySelector<HTMLButtonElement>("button.sw-insertion-affordance")!;
+      affordance.focus();
+      affordance.click();
+
+      const firstItem = container.querySelector<HTMLButtonElement>("[role='menuitem']")!;
+      firstItem.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+      // Focus must return to the invoking affordance, not remain on the menu item.
+      expect(document.activeElement).toBe(affordance);
+
+      document.body.removeChild(anchor);
+    });
+  });
+
+  describe("data-edge-id contract", () => {
+    it("affordance button data-edge-id matches the edge passed to attachToEdge", () => {
+      const { ui } = makeHarness();
+      const anchor = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, anchor);
+
+      const button = anchor.querySelector<HTMLButtonElement>("button.sw-insertion-affordance");
+      expect(button).not.toBeNull();
+      expect(button?.getAttribute("data-edge-id")).toBe(INITIAL_EDGE_ID);
+    });
+
+    it("data-edge-id is present as an HTML attribute (not just a dataset property)", () => {
+      const { ui } = makeHarness();
+      const anchor = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, anchor);
+
+      const button = anchor.querySelector<HTMLButtonElement>("button.sw-insertion-affordance");
+      // Verify both access patterns return the same value.
+      expect(button?.getAttribute("data-edge-id")).toBe(INITIAL_EDGE_ID);
+      expect(button?.dataset.edgeId).toBe(INITIAL_EDGE_ID);
+    });
+
+    it("re-attached affordance preserves data-edge-id for the same edge", () => {
+      const { ui } = makeHarness();
+      const anchor = document.createElement("div");
+      ui.attachToEdge(INITIAL_EDGE_ID, anchor);
+      ui.attachToEdge(INITIAL_EDGE_ID, anchor);
+
+      const buttons = anchor.querySelectorAll<HTMLButtonElement>("button.sw-insertion-affordance");
+      expect(buttons.length).toBe(1);
+      expect(buttons[0]?.getAttribute("data-edge-id")).toBe(INITIAL_EDGE_ID);
+    });
+
+    it("different edges produce distinct data-edge-id values", () => {
+      const { ui } = makeHarness();
+      const anchorA = document.createElement("div");
+      const anchorB = document.createElement("div");
+      ui.attachToEdge("edge-a", anchorA);
+      ui.attachToEdge("edge-b", anchorB);
+
+      const btnA = anchorA.querySelector<HTMLButtonElement>("button.sw-insertion-affordance");
+      const btnB = anchorB.querySelector<HTMLButtonElement>("button.sw-insertion-affordance");
+      expect(btnA?.getAttribute("data-edge-id")).toBe("edge-a");
+      expect(btnB?.getAttribute("data-edge-id")).toBe("edge-b");
+    });
   });
 
   describe("updateGraph", () => {

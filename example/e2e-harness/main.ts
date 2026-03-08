@@ -103,6 +103,12 @@ class SwEditorElement extends HTMLElement {
   /** Unsubscribe function for the viewport-change listener. */
   #unsubViewport: (() => void) | null = null;
 
+  /** Monotonic token to ignore obsolete deferred affordance rebuilds. */
+  #affordanceSyncToken = 0;
+
+  /** Monotonic generation counter for layout-changing operations. */
+  #layoutGeneration = 0;
+
   // --------------------------------------------------------------------------
   // Lifecycle
   // --------------------------------------------------------------------------
@@ -136,7 +142,7 @@ class SwEditorElement extends HTMLElement {
     }
     this.#adapter.mount(canvas, this.#graph);
 
-    this.#syncAffordances();
+    this.#refreshAffordancesAfterGraphUpdate();
 
     // Re-position affordances whenever the viewport is panned or zoomed so
     // that buttons stay aligned with the underlying edge midpoints.
@@ -179,7 +185,7 @@ class SwEditorElement extends HTMLElement {
     this.#counter = new RevisionCounter();
     this.#graph = bootstrapWorkflowGraph();
     this.#adapter.update(this.#graph);
-    this.#syncAffordances();
+    this.#refreshAffordancesAfterGraphUpdate();
     this.#syncTaskNodes();
   };
 
@@ -196,17 +202,81 @@ class SwEditorElement extends HTMLElement {
    * they appear above the rete canvas without being clipped by its
    * `overflow: hidden` style.
    */
-  #syncAffordances(): void {
-    for (const el of Array.from(this.querySelectorAll(".sw-insertion-affordance"))) {
-      el.remove();
+  #syncAffordances(options?: { rebuild?: boolean }): void {
+    const existingButtons = new Map<string, HTMLButtonElement>();
+    for (const button of Array.from(
+      this.querySelectorAll<HTMLButtonElement>(".sw-insertion-affordance"),
+    )) {
+      const edgeId = button.dataset.edgeId;
+      if (edgeId) {
+        existingButtons.set(edgeId, button);
+      } else {
+        button.remove();
+      }
+    }
+
+    if (options?.rebuild) {
+      for (const button of existingButtons.values()) {
+        button.remove();
+      }
+      existingButtons.clear();
     }
 
     if (!this.#adapter) return;
 
-    const anchors = this.#adapter.getInsertionAnchors();
-    for (const anchor of anchors) {
-      this.#addAffordanceForEdge(anchor.edgeId, anchor.x, anchor.y);
+    const currentEdgeIds = new Set((this.#graph?.edges ?? []).map((edge) => edge.id));
+    const anchors = this.#adapter
+      .getInsertionAnchors()
+      .filter((anchor) => currentEdgeIds.has(anchor.edgeId));
+    const anchorMap = new Map(anchors.map((anchor) => [anchor.edgeId, anchor]));
+
+    for (const [edgeId, button] of existingButtons) {
+      if (!anchorMap.has(edgeId)) {
+        button.remove();
+        existingButtons.delete(edgeId);
+      }
     }
+
+    for (const anchor of anchors) {
+      const existing = existingButtons.get(anchor.edgeId);
+      if (existing) {
+        existing.style.left = `${anchor.x}px`;
+        existing.style.top = `${anchor.y}px`;
+      } else {
+        this.#addAffordanceForEdge(anchor.edgeId, anchor.x, anchor.y);
+      }
+    }
+  }
+
+  /**
+   * Rebuilds insertion affordances after graph-changing updates.
+   *
+   * Renderer adapters may apply graph/layout updates asynchronously, so this
+   * method performs an immediate rebuild plus deferred rebuilds to ensure stale
+   * controls are pruned and current anchors are reflected consistently.
+   */
+  #refreshAffordancesAfterGraphUpdate(): void {
+    const generation = ++this.#layoutGeneration;
+    this.dataset.layoutGeneration = String(generation);
+    delete this.dataset.layoutSettled;
+
+    const token = ++this.#affordanceSyncToken;
+    const syncIfCurrent = (): void => {
+      if (token !== this.#affordanceSyncToken) return;
+      this.#syncAffordances({ rebuild: true });
+    };
+
+    syncIfCurrent();
+    queueMicrotask(syncIfCurrent);
+    requestAnimationFrame(() => {
+      syncIfCurrent();
+      // Signal that post-layout affordance rebuild is complete for this
+      // generation. E2e helpers can wait for layoutSettled === layoutGeneration
+      // as a deterministic readiness check.
+      if (generation === this.#layoutGeneration) {
+        this.dataset.layoutSettled = String(generation);
+      }
+    });
   }
 
   /**
@@ -222,6 +292,7 @@ class SwEditorElement extends HTMLElement {
     button.setAttribute("aria-label", "Insert task");
     button.setAttribute("data-edge-id", edgeId);
     button.className = "sw-insertion-affordance";
+    button.setAttribute("data-edge-id", edgeId);
     button.textContent = "+";
 
     // Position at the renderer-provided anchor point, centered on the
@@ -259,6 +330,11 @@ class SwEditorElement extends HTMLElement {
    * @param edgeId - The edge at which the new task will be inserted.
    */
   #openMenu(edgeId: string): void {
+    // Remember the invoking affordance so focus can be restored on Escape.
+    const invoker = this.querySelector<HTMLButtonElement>(
+      `.sw-insertion-affordance[data-edge-id="${edgeId}"]`,
+    );
+
     // Close any existing menu before opening a new one.
     for (const el of Array.from(this.querySelectorAll(".sw-task-menu"))) {
       el.remove();
@@ -315,6 +391,7 @@ class SwEditorElement extends HTMLElement {
           case "Escape":
             e.preventDefault();
             menu.remove();
+            invoker?.focus();
             break;
         }
       });
@@ -353,7 +430,7 @@ class SwEditorElement extends HTMLElement {
     }
 
     this.#adapter.update(this.#graph);
-    this.#syncAffordances();
+    this.#refreshAffordancesAfterGraphUpdate();
     this.#syncTaskNodes();
 
     if (insertedNodeId !== undefined) {
@@ -444,7 +521,7 @@ class SwEditorElement extends HTMLElement {
   setOrientation(mode: "top-to-bottom" | "left-to-right"): void {
     if (!this.#adapter) return;
     this.#adapter.setOrientation(mode);
-    this.#syncAffordances();
+    this.#refreshAffordancesAfterGraphUpdate();
     this.#syncTaskNodes();
   }
 
@@ -468,7 +545,7 @@ class SwEditorElement extends HTMLElement {
     const graph = projectWorkflowToGraph(result.workflow);
     this.#graph = graph;
     this.#adapter.update(graph);
-    this.#syncAffordances();
+    this.#refreshAffordancesAfterGraphUpdate();
     this.#syncTaskNodes();
     this.dataset.nodeCount = String(graph.nodes.length);
   }

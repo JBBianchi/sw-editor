@@ -169,6 +169,47 @@ export async function assertAffordanceWithinTolerance(
 }
 
 /**
+ * Collect all unique edge identifiers represented by visible insertion
+ * affordance buttons.
+ *
+ * @param page - The Playwright {@link Page} instance.
+ * @returns Ordered list of unique `data-edge-id` values.
+ */
+export async function getInsertionEdgeIds(page: Page): Promise<string[]> {
+  const buttons = page.locator(INSERT_BUTTON_SELECTOR);
+  const count = await buttons.count();
+  const ids: string[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const edgeId = await buttons.nth(i).getAttribute("data-edge-id");
+    if (edgeId && !ids.includes(edgeId)) {
+      ids.push(edgeId);
+    }
+  }
+
+  return ids;
+}
+
+/**
+ * Assert that every insertion affordance edge is within the given midpoint
+ * tolerance.
+ *
+ * @param page - The Playwright {@link Page} instance.
+ * @param tolerancePx - Maximum allowed pixel distance (default `6`).
+ */
+export async function assertAllAffordancesWithinTolerance(
+  page: Page,
+  tolerancePx = 6,
+): Promise<void> {
+  const edgeIds = await getInsertionEdgeIds(page);
+  expect(edgeIds.length, "At least one insertion affordance edge should exist").toBeGreaterThan(0);
+
+  for (const edgeId of edgeIds) {
+    await assertAffordanceWithinTolerance(page, edgeId, tolerancePx);
+  }
+}
+
+/**
  * Simulate a pan-then-zoom viewport transform on the editor canvas.
  *
  * Panning is performed via a mouse drag on the canvas center. Zooming is
@@ -218,25 +259,84 @@ export async function panAndZoom(
 }
 
 /**
+ * Wait for the harness to signal that a layout-changing operation has settled.
+ *
+ * The `sw-editor` element exposes `data-layout-generation` (incremented before
+ * each layout op) and `data-layout-settled` (set to the same value after the
+ * deferred affordance rebuild completes). This function waits until the two
+ * attributes match, providing a deterministic readiness check that does not
+ * rely on position-polling heuristics.
+ *
+ * Falls back to {@link waitForAnchorStabilization} when the attributes are
+ * absent (e.g. older harness versions without the signal).
+ *
+ * @param page - The Playwright {@link Page} instance.
+ * @param timeout - Maximum milliseconds to wait (default `5000`).
+ */
+export async function waitForLayoutSettled(page: Page, timeout = 5_000): Promise<void> {
+  const editor = page.locator("sw-editor").first();
+
+  try {
+    await editor.waitFor({ state: "attached", timeout: 2_000 });
+  } catch {
+    // Editor element not found; fall back to position-based stabilization.
+    await waitForAnchorStabilization(page);
+    return;
+  }
+
+  const hasSignal = await editor.evaluate((el) => el.dataset.layoutGeneration !== undefined);
+
+  if (!hasSignal) {
+    // Harness does not expose the settling signal; fall back.
+    await waitForAnchorStabilization(page);
+    return;
+  }
+
+  // Wait until data-layout-settled matches data-layout-generation.
+  await page.waitForFunction(
+    (selector: string) => {
+      const el = document.querySelector(selector);
+      if (!el || !(el instanceof HTMLElement)) return false;
+      const gen = el.dataset.layoutGeneration;
+      const settled = el.dataset.layoutSettled;
+      return gen !== undefined && settled !== undefined && gen === settled;
+    },
+    "sw-editor",
+    { timeout },
+  );
+
+  // Allow one additional frame for any pending paint/reflow.
+  await page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => r())));
+}
+
+/**
  * Wait until insertion anchor positions have settled after a viewport or
  * graph change.
  *
- * The function polls the bounding-box positions of all visible insertion
- * affordance buttons twice with a short interval. If positions match between
- * polls (within 1 px), anchors are considered stable. Falls back to a fixed
- * timeout if no affordance buttons are present.
+ * When no affordance buttons are present yet (e.g. immediately after an
+ * orientation switch that destroys and rebuilds the DOM), the function waits
+ * for at least one button to appear before starting the position-polling
+ * loop. This eliminates transient timing flakes caused by assertions
+ * running before the renderer has re-created its edge affordances.
  *
  * @param page - The Playwright {@link Page} instance.
  */
 export async function waitForAnchorStabilization(page: Page): Promise<void> {
   const buttons = page.locator(INSERT_BUTTON_SELECTOR);
-  const count = await buttons.count();
 
+  // If no affordances exist yet, wait for at least one to appear (up to 5 s).
+  // This handles the gap between orientation-triggered DOM teardown and the
+  // renderer rebuilding affordance buttons.
+  const count = await buttons.count();
   if (count === 0) {
-    // No affordances to stabilize; wait a short fixed period for renderer
-    // layout to complete.
-    await page.waitForTimeout(150);
-    return;
+    try {
+      await buttons.first().waitFor({ state: "attached", timeout: 5_000 });
+    } catch {
+      // Affordances never appeared — fall back to a short fixed wait so the
+      // caller can proceed (e.g. empty graphs with no edges).
+      await page.waitForTimeout(200);
+      return;
+    }
   }
 
   // Snapshot current positions.
@@ -252,14 +352,15 @@ export async function waitForAnchorStabilization(page: Page): Promise<void> {
     return positions;
   };
 
-  // Poll up to 10 times with 50 ms intervals (~500 ms max).
+  // Poll up to 15 times with 50 ms intervals (~750 ms max).
   let previous = await snapshot();
-  const maxAttempts = 10;
+  const maxAttempts = 15;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await page.waitForTimeout(50);
     const current = await snapshot();
 
     if (
+      current.length > 0 &&
       current.length === previous.length &&
       current.every(
         (pt, i) => Math.abs(pt.x - previous[i].x) <= 1 && Math.abs(pt.y - previous[i].y) <= 1,

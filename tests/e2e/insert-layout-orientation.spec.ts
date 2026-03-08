@@ -24,7 +24,7 @@ const EDITOR_ELEMENT = "sw-editor";
 const NEW_WORKFLOW_BUTTON_SELECTOR = 'button[aria-label="Create new workflow"]';
 
 /** Orientation mode selector added in the e2e harness toolbar. */
-const ORIENTATION_SELECT_SELECTOR = '#orientation-select';
+const ORIENTATION_SELECT_SELECTOR = "#orientation-select";
 
 /** Insertion affordance buttons attached to graph edges. */
 const INSERT_BUTTON_SELECTOR = 'button[aria-label="Insert task"]';
@@ -149,23 +149,43 @@ async function seedGraphWithInsertions(page: Page, insertions: number): Promise<
 /**
  * Change orientation using the harness orientation selector.
  *
+ * After selecting the new orientation, waits for rendered edges to be
+ * present in the DOM and for anchor positions to stabilize. This two-phase
+ * wait eliminates transient failures caused by the renderer tearing down
+ * and rebuilding edge elements asynchronously during re-layout.
+ *
  * @param page - Playwright page.
  * @param mode - Requested orientation mode.
  */
 async function setOrientation(page: Page, mode: OrientationMode): Promise<void> {
   await page.locator(ORIENTATION_SELECT_SELECTOR).selectOption(mode);
+
+  // Use the deterministic settling signal exposed by the harness, then
+  // confirm edge elements are present and anchors are position-stable.
+  await waitForLayoutSettled(page);
+
+  const edgeSelector = '[data-testid^="rf__edge-"], [data-connection-id]';
+  await page.locator(edgeSelector).first().waitFor({ state: "attached", timeout: 5_000 });
+
   await waitForAnchorStabilization(page);
 }
 
 /**
  * Collect all `data-edge-id` values from currently visible insertion buttons.
  *
+ * Uses an explicit timeout so the wait does not hang indefinitely when
+ * buttons have not yet been rendered after an orientation change.
+ *
  * @param page - Playwright page.
  * @returns Array of visible edge IDs.
  */
 async function getVisibleEdgeIds(page: Page): Promise<string[]> {
   const buttons = page.locator(INSERT_BUTTON_SELECTOR);
-  await buttons.first().waitFor({ state: "visible" });
+  try {
+    await buttons.first().waitFor({ state: "visible", timeout: 5_000 });
+  } catch {
+    return [];
+  }
 
   const count = await buttons.count();
   const ids: string[] = [];
@@ -642,11 +662,15 @@ async function assertPortSidesMatchOrientation(page: Page, mode: OrientationMode
 // Tests
 // ---------------------------------------------------------------------------
 
+/** Task type selection menu opened by an insertion affordance. */
+const TASK_MENU_SELECTOR = '[role="menu"][aria-label="Select task type to insert"]';
+
 for (const renderer of RENDERERS) {
   test.describe(`Orientation switch [${renderer.name}]`, () => {
     test.beforeEach(async ({ page }) => {
       await openEditor(page, renderer.urlSuffix);
       await createNewWorkflow(page);
+      await waitForLayoutSettled(page);
       await waitForAnchorStabilization(page);
       await seedGraphWithInsertions(page, 2);
     });
@@ -678,6 +702,77 @@ for (const renderer of RENDERERS) {
       await setOrientation(page, "top-to-bottom");
       await assertAllAffordancesAligned(page);
       await assertPortSidesMatchOrientation(page, "top-to-bottom");
+    });
+  });
+
+  test.describe(`data-edge-id contract [${renderer.name}]`, () => {
+    test.beforeEach(async ({ page }) => {
+      await openEditor(page, renderer.urlSuffix);
+      await createNewWorkflow(page);
+      await waitForAnchorStabilization(page);
+    });
+
+    test("every affordance button has a non-empty data-edge-id attribute", async ({ page }) => {
+      const buttons = page.locator(INSERT_BUTTON_SELECTOR);
+      const count = await buttons.count();
+      expect(count, "At least one insertion affordance must be present").toBeGreaterThan(0);
+
+      for (let i = 0; i < count; i++) {
+        const edgeId = await buttons.nth(i).getAttribute("data-edge-id");
+        expect(edgeId, `Affordance button ${i} must carry data-edge-id`).toBeTruthy();
+        expect((edgeId as string).length).toBeGreaterThan(0);
+      }
+    });
+
+    test("data-edge-id values survive an orientation switch", async ({ page }) => {
+      await setOrientation(page, "left-to-right");
+
+      const buttons = page.locator(INSERT_BUTTON_SELECTOR);
+      const count = await buttons.count();
+      expect(count).toBeGreaterThan(0);
+
+      for (let i = 0; i < count; i++) {
+        const edgeId = await buttons.nth(i).getAttribute("data-edge-id");
+        expect(edgeId, `Affordance button ${i} must retain data-edge-id after orientation switch`).toBeTruthy();
+      }
+    });
+  });
+
+  test.describe(`Escape focus-return [${renderer.name}]`, () => {
+    test.beforeEach(async ({ page }) => {
+      await openEditor(page, renderer.urlSuffix);
+      await createNewWorkflow(page);
+      await waitForAnchorStabilization(page);
+    });
+
+    test("Escape closes the menu and returns focus to the invoking affordance", async ({ page }) => {
+      const affordance = page.locator(INSERT_BUTTON_SELECTOR).first();
+      await affordance.focus();
+      await affordance.press("Enter");
+
+      const menu = page.locator(TASK_MENU_SELECTOR);
+      await expect(menu).toBeVisible();
+
+      await page.keyboard.press("Escape");
+
+      await expect(menu).not.toBeVisible();
+      await expect(affordance).toBeFocused();
+    });
+
+    test("Escape focus-return works after an orientation switch", async ({ page }) => {
+      await setOrientation(page, "left-to-right");
+
+      const affordance = page.locator(INSERT_BUTTON_SELECTOR).first();
+      await affordance.focus();
+      await affordance.press("Enter");
+
+      const menu = page.locator(TASK_MENU_SELECTOR);
+      await expect(menu).toBeVisible();
+
+      await page.keyboard.press("Escape");
+
+      await expect(menu).not.toBeVisible();
+      await expect(affordance).toBeFocused();
     });
   });
 }
