@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "mcp__spec-kit-documentation__fetch_spec_kit_documentation",
+      "mcp__spec-kit-documentation__search_spec_kit_documentation",
+      "mcp__spec-kit-documentation__search_spec_kit_code",
+      "mcp__spec-kit-documentation__fetch_generic_url_content"
+    ]
+  },
+  "enableAllProjectMcpServers": true
+}
