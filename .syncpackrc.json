@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/syncpack@14.2.0/dist/schema.json",
+  "versionGroups": [
+    {
+      "label": "Use workspace protocol for local packages",
+      "dependencies": ["$LOCAL"],
+      "dependencyTypes": ["prod", "dev"],
+      "pinVersion": "workspace:*"
+    },
+    {
+      "label": "Peer deps must be consistent across packages",
+      "dependencyTypes": ["peer"],
+      "policy": "sameRange"
+    }
+  ]
+}

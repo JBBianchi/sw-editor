@@ -1,0 +1,42 @@
+{
+  "name": "serverless-workflow-editor",
+  "version": "0.0.0",
+  "private": true,
+  "description": "CNCF Serverless Workflow Specification Visual Editor",
+  "homepage": "https://github.com/serverlessworkflow/editor",
+  "bugs": {
+    "url": "https://github.com/serverlessworkflow/editor/issues"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/serverlessworkflow/editor.git"
+  },
+  "type": "module",
+  "scripts": {
+    "dependencies:check": "syncpack lint",
+    "dependencies:fix": "syncpack fix",
+    "format": "oxfmt --config .oxfmtrc.json",
+    "format:check": "oxfmt --config .oxfmtrc.json --check",
+    "build:prod": "pnpm -r --stream --if-present build:prod",
+    "build:dev": "pnpm -r --stream --if-present build:dev",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "catalog:",
+    "lint-staged": "catalog:",
+    "oxfmt": "catalog:",
+    "syncpack": "catalog:",
+    "typescript": "catalog:"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md,yml,yaml}": [
+      "pnpm format"
+    ]
+  },
+  "engines": {
+    "node": "^22.13.0 || >=24.0.0",
+    "pnpm": "10.31.0"
+  },
+  "packageManager": "pnpm@10.31.0"
+}

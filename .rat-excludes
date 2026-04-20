@@ -1,9 +1,10 @@
 .gitattributes
 .npmrc
-.prettierignore
 .rat-excludes
 .rat-reports
 pnpm-lock.yaml
 pnpm-workspace.yaml
 repo/graph.dot
 repo/repo.iml
+**/__snapshots__/**
+

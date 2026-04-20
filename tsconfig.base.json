@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    /* Module */
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+
+    /* Language and Environment */
+    "lib": ["esnext", "dom", "DOM.Iterable"],
+    "target": "ESNext",
+    "types": ["node"],
+    "jsx": "react-jsx",
+
+    /* Type Checking */
+    "strict": true,
+    "skipLibCheck": true,
+    "moduleDetection": "force",
+
+    // /* Stricter Typechecking Options */
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    /* Interop Constraints */
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}
